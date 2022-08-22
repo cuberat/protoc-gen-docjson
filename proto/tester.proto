@@ -1,0 +1,54 @@
+/*
+ * This is a file-level comment.
+ */
+
+syntax = "proto3";
+
+import "google/protobuf/descriptor.proto";
+
+package OwensServices.Tester;
+
+extend google.protobuf.FieldOptions {
+  optional bool required = 51234;
+}
+
+option go_package = "owensservices/grpc/tester";
+option java_package = "owensservices.tester";
+
+// Tester main structure.
+message TesterRequest {
+    // Information about the client.
+    ClientInfo client_info = 1 [(OwensServices.Tester.required) = true];
+
+    string url = 2; // URL to query about.
+}
+
+message TesterResponse {
+    // Is it in the list?
+    bool in_list = 1;
+
+    oneof stuff {
+        string foo = 2;
+        int32 bar = 3;
+    }
+}
+
+// Structure for client information.
+message ClientInfo {
+    // Name of the client.
+    string name = 1;
+
+    // Alternate name.
+    string alt_name = 2 [deprecated = true];
+
+    // Random repeated field.
+    repeated string list_of_stuff = 3;
+}
+
+// Structure for old stuff.
+message OldStuff {
+    option deprecated = true;
+
+    // Name of thing.
+    string name = 1;
+}
