@@ -8,15 +8,18 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	// "path"
 	text_scanner "text/scanner"
 	"strings"
 
 	// Third-party modules.
 	log "github.com/sirupsen/logrus"
+	pluginpb "google.golang.org/protobuf/types/pluginpb"
 	proto "google.golang.org/protobuf/proto"
 	desc_pb "google.golang.org/protobuf/types/descriptorpb"
+
 	// Generated code.
+
 	// First-party modules.
 )
 
@@ -24,25 +27,151 @@ func main() {
 	var (
 		infile               string
 		outfile              string
-		output_template_data bool
-		reader               io.Reader
-		writer               io.Writer
 	)
 
 	flag.StringVar(&infile, "infile", "", "Input file")
 	flag.StringVar(&outfile, "outfile", "", "Output file")
-	flag.BoolVar(&output_template_data, "template", false,
-		"Output JSON suitable for applying to documentation templates")
 
 	flag.Parse()
 
-	if infile == "" {
-		log.Fatal("`infile` parameter required")
+	debug := true
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
 	}
+
+	if infile != "" {
+		if err := process_descriptor_set_file(infile, outfile); err != nil {
+			log.Fatalf("couldn't process descriptor file %q: %s",
+				infile, err)
+		}
+		os.Exit(0)
+	}
+
+	err := process_code_generation_request(os.Stdin, os.Stdout)
+	if err != nil {
+		log.Fatalf("couldn't process code generation request: %s", err)
+	}
+
+}
+
+func process_code_generation_request(
+	reader io.Reader,
+	writer io.Writer,
+) error {
+	raw_request, err := io.ReadAll(reader)
+	if err != nil {
+		return fmt.Errorf("read failed: %w", err)
+	}
+
+	gen_req := new(pluginpb.CodeGeneratorRequest)
+	err = proto.Unmarshal(raw_request, gen_req)
+	if err != nil {
+		return fmt.Errorf("couldn't unmarshal CodeGenerationRequest: %w",
+			err)
+	}
+
+	files_to_generate := map[string]bool{}
+	for _, file_name := range gen_req.FileToGenerate {
+		files_to_generate[file_name] = true
+	}
+
+	log.Debug("file_to_generate: %s", gen_req.FileToGenerate)
+	if gen_req.Parameter != nil {
+		log.Debugf("parameter: %s", *gen_req.Parameter)
+	}
+	if gen_req.CompilerVersion != nil {
+		log.Debugf("compiler_version: %s", gen_req.CompilerVersion)
+	}
+
+	protos_to_process := make([]*desc_pb.FileDescriptorProto, 0, 1)
+
+	for _, file_desc := range gen_req.ProtoFile {
+		name := ""
+		if file_desc.Name != nil {
+			name = *file_desc.Name
+		}
+		pkg := ""
+		if file_desc.Package != nil {
+			pkg = *file_desc.Package
+		}
+		log.Debugf("file_desc %s - %s", name, pkg)
+
+		if files_to_generate[name] {
+			protos_to_process = append(protos_to_process, file_desc)
+		}
+	}
+
+	for _, file_desc := range protos_to_process {
+		log.Debugf("---> will process %q", *file_desc.Name)
+	}
+
+	gen_resp := new(pluginpb.CodeGeneratorResponse)
+
+	template_data, err := gen_template_data(protos_to_process)
+	if err != nil {
+		err = fmt.Errorf("couldn't generate template data: %w", err)
+		send_code_gen_err(err, writer)
+		return err
+	}
+
+	file := new(pluginpb.CodeGeneratorResponse_File)
+
+	name := "doc.json"
+	file.Name = &name
+
+	json_bytes, err := json.Marshal(template_data)
+	if err != nil {
+		err = fmt.Errorf("couldn't marshal template data to JSON: %s", err)
+		send_code_gen_err(err, writer)
+		return err
+	}
+
+	content := string(json_bytes)
+	file.Content = &content
+
+	gen_resp.File = []*pluginpb.CodeGeneratorResponse_File{file}
+
+	send_code_gen_resp(gen_resp, writer)
+
+	return nil
+}
+
+func send_code_gen_err(err error, writer io.Writer) {
+	gen_resp := new(pluginpb.CodeGeneratorResponse)
+	err_str := err.Error()
+	gen_resp.Error = &err_str
+	send_code_gen_resp(gen_resp, writer)
+}
+
+func send_code_gen_resp(
+	resp *pluginpb.CodeGeneratorResponse,
+	writer io.Writer,
+) error {
+	raw_resp, err := proto.Marshal(resp)
+	if err != nil {
+		return fmt.Errorf("couldn't marshal CodeGeneratorResponse: %w", err)
+	}
+
+	if _, err = writer.Write(raw_resp); err != nil {
+		return fmt.Errorf("couldn't write response to compiler: %w", err)
+	}
+
+	return nil
+}
+
+func process_descriptor_set_file(infile, outfile string) error {
+	var (
+		reader io.Reader
+		writer io.Writer
+	)
+
+	output_template_data := true
 
 	in_fh, err := os.Open(infile)
 	if err != nil {
-		log.Fatalf("couldn't open %q for input: %s", infile, err)
+		return fmt.Errorf("couldn't open %q for input: %w", infile, err)
 	}
 	reader = in_fh
 	defer in_fh.Close()
@@ -52,32 +181,34 @@ func main() {
 	} else {
 		out_fh, err := os.Create(outfile)
 		if err != nil {
-			log.Fatalf("couldn't open %q for output: %s", outfile, err)
+			return fmt.Errorf("couldn't open %q for output: %w", outfile, err)
 		}
 		writer = out_fh
 		defer out_fh.Close()
 	}
 
 	if output_template_data {
-		err := gen_template_data(reader, writer)
+		err := write_template_data(reader, writer)
 		if err != nil {
-			log.Fatalf("couldn't generate template data: %s", err)
+			return fmt.Errorf("couldn't generate template data: %w", err)
 		}
 		os.Exit(0)
 	}
 
 	err = convert_descriptor_set(reader, writer)
 	if err != nil {
-		log.Fatalf("couldn't convert descriptor set from file %q: %s",
+		return fmt.Errorf("couldn't convert descriptor set from file %q: %w",
 			infile, err)
 	}
+
+	return nil
 }
 
 type FieldData struct {
 	TypeName string `json:"type"`
 	Name string `json:"name"`
 	Label string `json:"label"`
-	SlotNumber int32 `json:"slot_number"`
+	FieldNumber int32 `json:"field_number"`
 	DefaultValue string `json:"default_value"`
 	OneofIndex int32 `json:"oneof_index"`
 	Options *desc_pb.FieldOptions `json:"options"`
@@ -106,7 +237,7 @@ type MessageData struct {
 
 type FileExtension struct {
 	Name string `json:"name"`
-	SlotNumber int32 `json:"slot_number"`
+	FieldNumber int32 `json:"field_number"`
 	Type string `json:"type"`
 	Extendee string `json:"extendee"`
 }
@@ -123,14 +254,31 @@ type TemplateData struct {
 	Files []*FileData `json:"files"`
 }
 
-func gen_template_data(reader io.Reader, writer io.Writer) error {
+func write_template_data(reader io.Reader, writer io.Writer) error {
 	desc_set, err := unmarshal_descriptor_set(reader)
 	if err != nil {
 		return err
 	}
 
+	template_data, err := gen_template_data(desc_set.File)
+	if err != nil {
+		return err
+	}
+
+	json_bytes, err := json.Marshal(template_data)
+	if err != nil {
+		return fmt.Errorf("couldn't marshal template data to JSON: %s", err)
+	}
+	writer.Write(json_bytes)
+
+	return nil
+}
+
+func gen_template_data(
+	file_descriptors []*desc_pb.FileDescriptorProto,
+) (*TemplateData, error) {
 	template_data := new(TemplateData)
-	for _, desc_file_info := range desc_set.File {
+	for _, desc_file_info := range file_descriptors {
 		this_file := new(FileData)
 		template_data.Files = append(template_data.Files, this_file)
 
@@ -156,7 +304,7 @@ func gen_template_data(reader io.Reader, writer io.Writer) error {
 				this_extension.Name = *extension.Name
 			}
 			if extension.Number != nil {
-				this_extension.SlotNumber = *extension.Number
+				this_extension.FieldNumber = *extension.Number
 			}
 			if extension.Type != nil {
 				this_extension.Type =
@@ -175,20 +323,14 @@ func gen_template_data(reader io.Reader, writer io.Writer) error {
 		}
 	}
 
-	process_extensions(template_data, desc_set)
+	process_extensions(template_data, file_descriptors)
 
-	json_bytes, err := json.Marshal(template_data)
-	if err != nil {
-		return fmt.Errorf("couldn't marshal template data to JSON: %s", err)
-	}
-	writer.Write(json_bytes)
-
-	return nil
+	return template_data, nil
 }
 
 func process_extensions(
 	template_data *TemplateData,
-	desc_set *desc_pb.FileDescriptorSet,
+	file_descriptors []*desc_pb.FileDescriptorProto,
 ) {
 	// Collect all of the extensions so that we can resolve custom options as
 	// we walk through the structures again.
@@ -196,16 +338,16 @@ func process_extensions(
 	for _, file_info := range template_data.Files {
 		for _, ext := range file_info.Extensions {
 			if ext_type, ok := extensions[ext.Extendee]; ok {
-				ext_type[ext.SlotNumber] = ext
+				ext_type[ext.FieldNumber] = ext
 			} else {
 				extensions[ext.Extendee] = map[int32]*FileExtension{
-					ext.SlotNumber: ext,
+					ext.FieldNumber: ext,
 				}
 			}
 		}
 	}
 
-	for file_index, desc_file_info := range desc_set.File {
+	for file_index, desc_file_info := range file_descriptors {
 		if desc_file_info.SourceCodeInfo == nil {
 			continue
 		}
@@ -238,6 +380,9 @@ func process_extensions(
 
 							span_text := get_text_from_span(this_file.Name,
 								loc.Span)
+							if span_text == "" {
+								continue
+							}
 							option_val_str :=
 								get_option_val_from_string(span_text)
 							// FIXME: convert to correct type
@@ -316,7 +461,8 @@ func get_option_val_from_string(option_str string) string {
 }
 
 func get_text_from_span(file_name string, loc_span []int32) string {
-	file_path := path.Join("proto", file_name)
+	// file_path := path.Join("proto", file_name)
+	file_path := file_name
 	in_fh, err := os.Open(file_path)
 	if err != nil {
 		log.Errorf("couldn't open input file %s: %s", file_path, err)
@@ -446,7 +592,7 @@ func get_field_data_from_desc(
 		this_field.Name = *field.Name
 	}
 	if field.Number != nil {
-		this_field.SlotNumber = *field.Number
+		this_field.FieldNumber = *field.Number
 	}
 	if field.Label != nil {
 		s := desc_pb.FieldDescriptorProto_Label_name[int32(*field.Label)]
