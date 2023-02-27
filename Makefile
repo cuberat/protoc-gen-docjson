@@ -1,12 +1,16 @@
 DOCKER ?= podman
 
+TOP_DIR = $(shell /bin/pwd)
+OUTFILE = protos.json
+READABLE_OUTFILE = protos_readable.json
+
 PROTOS = tester service-tester
+PROTO_DIR = $(TOP_DIR)/proto
+PROTO_FILES = $(foreach proto,$(PROTOS),$(PROTO_DIR)/$(proto).proto)
 
-PROTO_DIR = proto
 
-PROTO_FILES = $(foreach proto,$(PROTOS),$(proto).proto)
+OUT_DIR = $(TOP_DIR)
 
-CUR_DIR = $(shell /bin/pwd)
 
 all: descriptors
 
@@ -19,12 +23,17 @@ descriptors:
 
 check: plugin
 	cd $(PROTO_DIR) && protoc \
-		--docjson_out=. \
-		--plugin=$(CUR_DIR)/cmd/protoc-gen-docjson/protoc-gen-docjson \
-		-I. \
+		--docjson_out="$(OUT_DIR)" \
+		--docjson_opt=outfile=$(OUTFILE),proto=$(PROTO_DIR) \
+		--plugin=$(TOP_DIR)/cmd/protoc-gen-docjson/protoc-gen-docjson \
+		-I$(PROTO_DIR) \
 		$(PROTO_FILES)
+	cat $(TOP_DIR)/$(OUTFILE) | jq > $(TOP_DIR)/$(READABLE_OUTFILE)
 
-plugin: cmd/protoc-gen-docjson/protoc-gen-docjson
+# plugin: cmd/protoc-gen-docjson/protoc-gen-docjson
 
-cmd/protoc-gen-docjson/protoc-gen-docjson: cmd/protoc-gen-docjson/protoc-gen-docjson.go
+plugin:
 	cd cmd/protoc-gen-docjson && go build -a
+
+# cmd/protoc-gen-docjson/protoc-gen-docjson:
+# 	cd cmd/protoc-gen-docjson && go build -a

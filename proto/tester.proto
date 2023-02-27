@@ -2,7 +2,8 @@
  * This is a file-level comment.
  */
 
-syntax = "proto3";
+// This is the syntax statement.
+syntax = "proto3"; // This is a trailing comment for syntax.
 
 import "google/protobuf/descriptor.proto";
 
@@ -12,24 +13,64 @@ extend google.protobuf.FieldOptions {
   optional bool required = 51234;
 }
 
+// This is a leading comment to the go_package file option.
 option go_package = "owensservices/grpc/tester";
 option java_package = "owensservices.tester";
 
-// Tester main structure.
+// Tester main structure. Foo.
 message TesterRequest {
     // Information about the client.
-    ClientInfo client_info = 1 [(OwensServices.Tester.required) = true];
+    ClientInfo client_info = 1 [(required) = true];
 
     string url = 2; // URL to query about.
 }
 
+// Detached leading comment for enum TesterError
+
+// Enumeration for errors.
+enum TesterError {
+    // No error.
+    NONE = 0;
+
+    // Detached leading comment for User error.
+
+    // User error.
+    PBKAC = 1;
+
+    // Internal error.
+    INTERN = 2;
+}
+
+// Comments for the TesterResponse message.
 message TesterResponse {
     // Is it in the list?
     bool in_list = 1;
 
+    // Comment for a oneof.
     oneof stuff {
+        // Comment for a field within a oneof.
         string foo = 2;
+
+        // Comment for the second field inside a oneof.
         int32 bar = 3;
+    }
+
+    // Response thing embedded enum.
+    enum ResponseThing {
+        // The foo thing.
+        FOO = 0;
+
+        // The bar thing.
+        BAR = 1;
+    }
+
+    // This is a thing.
+    ResponseThing thing = 4;
+
+    // Comment for an embedded message.
+    message EmbeddedTester {
+        // Leading comment for embedded field.
+        string embedded_field = 1; // Trailing comment for embedded field.
     }
 }
 
