@@ -35,6 +35,7 @@ func GenDocData(
 		template_data.FileMap[this_file.Name] = this_file
 
 		this_file.Package = desc_file_info.GetPackage()
+		namespace := docdata.Namespace{this_file.Package}
 
 		this_file.Dependencies =
 			make([]string, 0, len(desc_file_info.Dependency))
@@ -58,18 +59,19 @@ func GenDocData(
 		messages := make([]*docdata.MessageData, 0, len(desc_file_info.MessageType))
 		for _, msg := range desc_file_info.MessageType {
 			messages = append(messages,
-				get_msg_data_from_desc(msg,
-					docdata.Namespace{this_file.Package}))
+				get_msg_data_from_desc(msg, namespace, this_file))
 		}
 
 		this_file.Messages = messages
-		this_file.Enums = get_enum_data(desc_file_info.EnumType,
-			docdata.Namespace{this_file.Package})
+		this_file.Enums = get_enum_data(desc_file_info.EnumType, namespace,
+			this_file)
 		this_file.Services = get_service_data(desc_file_info.Service, this_file)
 
 		for _, extension := range desc_file_info.Extension {
 			this_extension := new(docdata.FileExtension)
 			this_extension.Name = extension.GetName()
+			this_extension.FullName = namespace.QualifyName(extension.GetName())
+			this_extension.DefinedIn = this_file.Name
 
 			this_extension.FieldNumber = extension.GetNumber()
 
@@ -91,7 +93,78 @@ func GenDocData(
 
 	extensions.ProcessExtensions(template_data, file_descriptors, plugin_opts)
 
+	massage_data(template_data)
+
 	return template_data, nil
+}
+
+func massage_data(data *docdata.TemplateData) {
+	for _, file_data := range data.FileMap {
+		massage_service_data(data, file_data.Services)
+		massage_message_data(data, file_data.Messages)
+		massage_extension_data(data, file_data.Extensions)
+		massage_enum_data(data, file_data.Enums)
+	}
+}
+
+func massage_service_data(
+	data *docdata.TemplateData,
+	services []*docdata.ServiceData,
+) {
+	data.ServiceMap = make(map[string]*docdata.ServiceData, len(services))
+	for _, service_data := range services {
+		data.ServiceMap[service_data.FullName] = service_data
+	}
+}
+
+func massage_message_data(
+	data *docdata.TemplateData,
+	messages []*docdata.MessageData,
+) {
+	// Do not wipe out the map if it already exists (e.g., in the case where we
+	// are processing nested messages).
+	if data.MessageMap == nil {
+		data.MessageMap = make(map[string]*docdata.MessageData, len(messages))
+	}
+
+	for _, message_data := range messages {
+		data.MessageMap[message_data.FullName] = message_data
+		data.MessageList = append(data.MessageList, message_data.FullName)
+
+		massage_enum_data(data, message_data.Enums)
+
+		// Handle nested messages.
+		massage_message_data(data, message_data.NestedMessages)
+	}
+}
+
+func massage_enum_data(
+	data *docdata.TemplateData,
+	enums []*docdata.EnumData,
+) {
+	if data.EnumMap == nil {
+		data.EnumMap = make(map[string]*docdata.EnumData, len(enums))
+	}
+
+	for _, enum_data := range enums {
+		data.EnumList = append(data.EnumList, enum_data.FullName)
+		data.EnumMap[enum_data.FullName] = enum_data
+	}
+}
+
+func massage_extension_data(
+	data *docdata.TemplateData,
+	extensions []*docdata.FileExtension,
+) {
+	if data.ExtensionMap == nil {
+		data.ExtensionMap =
+			make(map[string]*docdata.FileExtension, len(extensions))
+	}
+
+	for _, extension := range extensions {
+		data.ExtensionList = append(data.ExtensionList, extension.FullName)
+		data.ExtensionMap[extension.FullName] = extension
+	}
 }
 
 func get_service_data(
@@ -103,6 +176,7 @@ func get_service_data(
 		this_svc := new(docdata.ServiceData)
 		this_svc.Name = desc.GetName()
 		this_svc.FullName = file_data.Package + "." + this_svc.Name
+		this_svc.DefinedIn = file_data.Name
 
 		methods := make([]*docdata.MethodData, 0, len(desc.Method))
 		for _, method := range desc.Method {
@@ -127,6 +201,7 @@ func get_method_data_from_desc(
 	method_data := new(docdata.MethodData)
 	method_data.Name = desc_method.GetName()
 	method_data.FullName = svc_data.FullName + "." + method_data.Name
+	method_data.DefinedIn = file_data.Name
 	method_data.RequestType, method_data.RequestFullType =
 		extract_type_names(desc_method.GetInputType())
 	method_data.RequestStreaming = desc_method.GetClientStreaming()
@@ -281,41 +356,58 @@ func add_msg_desc(
 	case 4:
 		// Enum within a message.
 		enum_data := msg.Enums[loc_path[1]]
-		loc_path = loc_path[2:]
-		add_enum_comments(loc_path, enum_data, location)
+		add_enum_comments(loc_path[2:], enum_data, location)
 	case 8:
 		// Oneof declaration.
+		oneof_decl := msg.OneofDecls[loc_path[1]]
+		add_oneof_comments(loc_path[2:], oneof_decl, location)
+	}
+}
 
+func add_oneof_comments(
+	loc_path []int32,
+	oneof_decl *docdata.OneOfData,
+	location *desc_pb.SourceCodeInfo_Location,
+) {
+	if len(loc_path) == 0 {
+		// Comments for the oneof declaration.
+		oneof_decl.LeadingDetachedComments = location.LeadingDetachedComments
+		oneof_decl.LeadingComments, oneof_decl.TrailingComments,
+			oneof_decl.Description = clean_comments(location)
+		return
 	}
 }
 
 func get_msg_data_from_desc(
 	msg *desc_pb.DescriptorProto,
 	namespace docdata.Namespace,
+	file_data *docdata.FileData,
 ) *docdata.MessageData {
 	this_msg := new(docdata.MessageData)
 
 	this_msg.Name = msg.GetName()
 	this_msg.FullName = namespace.QualifyName(this_msg.Name)
+	this_msg.DefinedIn = file_data.Name
 
 	msg_ns := namespace.Extend(this_msg.Name)
 
 	fields := make([]*docdata.FieldData, 0, len(msg.Field))
 	for _, field_info := range msg.Field {
-		fields = append(fields, get_field_data_from_desc(field_info, msg_ns))
+		fields = append(fields,
+			get_field_data_from_desc(field_info, msg_ns, file_data))
 	}
 	this_msg.Fields = fields
 
-	this_msg.Enums = get_enum_data(msg.EnumType, namespace)
+	this_msg.Enums = get_enum_data(msg.EnumType, msg_ns, file_data)
 
 	this_msg.OneofDecls = get_oneof_data(msg.OneofDecl, msg_ns)
-	this_msg.ExtensionRanges = msg.ExtensionRange
+	// this_msg.ExtensionRanges = msg.ExtensionRange
 	this_msg.Options = msg.Options
 
 	if len(msg.NestedType) > 0 {
 		for _, nested_msg := range msg.NestedType {
 			this_msg.NestedMessages = append(this_msg.NestedMessages,
-				get_msg_data_from_desc(nested_msg, msg_ns))
+				get_msg_data_from_desc(nested_msg, msg_ns, file_data))
 		}
 	}
 
@@ -342,6 +434,7 @@ func get_oneof_data(
 func get_enum_data(
 	desc_enums []*desc_pb.EnumDescriptorProto,
 	namespace docdata.Namespace,
+	file_data *docdata.FileData,
 ) []*docdata.EnumData {
 	enum_data := []*docdata.EnumData{}
 
@@ -354,6 +447,7 @@ func get_enum_data(
 		enum_data = append(enum_data, this_enum)
 		this_enum.Name = desc_enum.GetName()
 		this_enum.FullName = namespace.QualifyName(this_enum.Name)
+		this_enum.DefinedIn = file_data.Name
 		log.Debugf("found enum %q", this_enum.Name)
 
 		for _, value := range desc_enum.Value {
@@ -379,12 +473,14 @@ func get_enum_data(
 func get_field_data_from_desc(
 	field *desc_pb.FieldDescriptorProto,
 	namespace docdata.Namespace,
+	file_data *docdata.FileData,
 ) *docdata.FieldData {
 	this_field := new(docdata.FieldData)
 
 	this_field.Name = field.GetName()
 	this_field.FullName = namespace.QualifyName(this_field.Name)
 	this_field.FieldNumber = field.GetNumber()
+	this_field.DefinedIn = file_data.Name
 
 	if field.Label != nil {
 		s := desc_pb.FieldDescriptorProto_Label_name[int32(*field.Label)]

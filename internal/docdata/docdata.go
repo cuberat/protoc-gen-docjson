@@ -37,9 +37,13 @@ type FieldData struct {
 	OneofIndex    int32                  `json:"oneof_index"`
 	Options       *desc_pb.FieldOptions  `json:"options"`
 	CustomOptions map[string]interface{} `json:"custom_options"`
+
+	// File this field was defined in.
+	DefinedIn string `json:"defined_in"`
 }
 
 type OneOfData struct {
+	CommentData
 	Name     string `json:"name"`
 	FullName string `json:"full_name"`
 }
@@ -54,31 +58,42 @@ type EnumValue struct {
 
 type EnumData struct {
 	CommentData
-	Name          string               `json:"name"`
-	FullName      string               `json:"full_name"`
-	Description   string               `json:"description"`
-	Values        []*EnumValue         `json:"values"`
-	Options       *desc_pb.EnumOptions `json:"options"`
-	CustomOptions []string             `json:"custom_options"`
+	Name          string                 `json:"name"`
+	FullName      string                 `json:"full_name"`
+	Description   string                 `json:"description"`
+	Values        []*EnumValue           `json:"values"`
+	Options       *desc_pb.EnumOptions   `json:"options"`
+	CustomOptions map[string]interface{} `json:"custom_options"`
+
+	// File this enum was defined in.
+	DefinedIn string `json:"defined_in"`
 }
 
 type MessageData struct {
 	CommentData
-	Name            string                                    `json:"name"`
-	FullName        string                                    `json:"full_name"`
-	Fields          []*FieldData                              `json:"fields"`
-	NestedMessages  []*MessageData                            `json:"nested_messages"`
-	Enums           []*EnumData                               `json:"enums"`
-	ExtensionRanges []*desc_pb.DescriptorProto_ExtensionRange `json:"extension_ranges"`
-	OneofDecls      []*OneOfData                              `json:"oneof_decl"`
-	Options         *desc_pb.MessageOptions                   `json:"options"`
+	Name           string         `json:"name"`
+	FullName       string         `json:"full_name"`
+	Fields         []*FieldData   `json:"fields"`
+	NestedMessages []*MessageData `json:"nested_messages"`
+	Enums          []*EnumData    `json:"enums"`
+	// ExtensionRanges []*desc_pb.DescriptorProto_ExtensionRange `json:"extension_ranges"`
+	OneofDecls    []*OneOfData            `json:"oneof_decl"`
+	Options       *desc_pb.MessageOptions `json:"options"`
+	CustomOptions map[string]interface{}  `json:"custom_options"`
+
+	// File this message was defined in.
+	DefinedIn string `json:"defined_in"`
 }
 
 type FileExtension struct {
 	Name        string `json:"name"`
+	FullName    string `json:"full_name"`
 	FieldNumber int32  `json:"field_number"`
 	Type        string `json:"type"`
 	Extendee    string `json:"extendee"`
+
+	// File this extension was defined in.
+	DefinedIn string `json:"defined_in"`
 }
 
 type SyntaxDecl struct {
@@ -97,32 +112,67 @@ type MethodData struct {
 	ResponseFullType  string                 `json:"response_full_type"`
 	ResponseStreaming bool                   `json:"response_streaming"`
 	Options           *desc_pb.MethodOptions `json:"options"`
+	CustomOptions     map[string]interface{} `json:"custom_options"`
+
+	// File this method was defined in.
+	DefinedIn string `json:"defined_in"`
 }
 
 type ServiceData struct {
 	CommentData
-	Name     string                  `json:"name"`
-	FullName string                  `json:"full_name"`
-	Methods  []*MethodData           `json:"methods"`
-	Options  *desc_pb.ServiceOptions `json:"options"`
+	Name          string                  `json:"name"`
+	FullName      string                  `json:"full_name"`
+	Methods       []*MethodData           `json:"methods"`
+	Options       *desc_pb.ServiceOptions `json:"options"`
+	CustomOptions map[string]interface{}  `json:"custom_options"`
+
+	// File this service was defined in.
+	DefinedIn string `json:"defined_in"`
 }
 
 type FileData struct {
-	Name                 string               `json:"name"`
-	Package              string               `json:"package"`
-	Messages             []*MessageData       `json:"messages"`
-	Enums                []*EnumData          `json:"enums"`
-	Services             []*ServiceData       `json:"services"`
-	Dependencies         []string             `json:"dependencies"`
-	ExternalDependencies []string             `json:"external_dependencies"`
-	Options              *desc_pb.FileOptions `json:"options"`
-	Extensions           []*FileExtension     `json:"extensions"`
-	Syntax               *SyntaxDecl          `json:"syntax"`
+	Name                 string                 `json:"name"`
+	Package              string                 `json:"package"`
+	Messages             []*MessageData         `json:"messages"`
+	Enums                []*EnumData            `json:"enums"`
+	Services             []*ServiceData         `json:"services"`
+	Dependencies         []string               `json:"dependencies"`
+	ExternalDependencies []string               `json:"external_dependencies"`
+	Options              *desc_pb.FileOptions   `json:"options"`
+	Extensions           []*FileExtension       `json:"extensions"`
+	Syntax               *SyntaxDecl            `json:"syntax"`
+	CustomOptions        map[string]interface{} `json:"custom_options"`
 }
 
 type TemplateData struct {
-	FileList []string             `json:"file_list"`
-	FileMap  map[string]*FileData `json:"file_map"`
+	// List of protobuf spec file names in the order provided by the protobuf
+	// compiler.
+	FileList []string `json:"file_list"`
+
+	// Map of protobuf spec file name to file details.
+	FileMap map[string]*FileData `json:"file_map"`
+
+	// List of fully-qualified service names.
+	Servicelist []string `json:"service_list"`
+
+	// Map of fully-qualified service names to service details.
+	ServiceMap map[string]*ServiceData `json:"service_map"`
+
+	// List of fully-qualified message names.
+	MessageList []string `json:"message_list"`
+
+	// Map of fully-qualified message names to message details.
+	MessageMap map[string]*MessageData `json:"message_map"`
+
+	// List of fully-qualified extension names.
+	ExtensionList []string `json:"extension_list"`
+
+	// Map of fully-qualified extensions to extension details.
+	ExtensionMap map[string]*FileExtension `json:"extension_map"`
+
+	EnumList []string `json:"enum_list"`
+
+	EnumMap map[string]*EnumData `json:"enum_map"`
 }
 
 func (ns Namespace) QualifyName(name string) string {

@@ -10,17 +10,48 @@ import "google/protobuf/descriptor.proto";
 package OwensServices.Tester;
 
 extend google.protobuf.FieldOptions {
-  optional bool required = 51234;
+  optional bool field_required = 51234;
 }
+
+extend google.protobuf.MethodOptions {
+  optional bool method_not_implemented = 51235;
+}
+
+extend google.protobuf.MessageOptions {
+  optional bool message_not_implemented = 51236;
+}
+
+extend google.protobuf.ServiceOptions {
+  optional bool service_not_implemented = 51237;
+}
+
+extend google.protobuf.FileOptions {
+  optional bool file_deprecated = 51238;
+  optional string file_mnemonic = 51240;
+  optional float file_double = 51241;
+  optional float file_float = 51242;
+  optional float file_int64 = 51243;
+}
+
+extend google.protobuf.EnumOptions {
+  optional bool enum_deprecated = 51239;
+}
+
 
 // This is a leading comment to the go_package file option.
 option go_package = "owensservices/grpc/tester";
 option java_package = "owensservices.tester";
 
+option (file_deprecated) = true;
+option (file_mnemonic) = "some random name";
+option (file_double) = 5643343.423;
+option (file_float) = 0.569;
+option (file_int64) = -343434343;
+
 // Tester main structure. Foo.
 message TesterRequest {
     // Information about the client.
-    ClientInfo client_info = 1 [(required) = true];
+    ClientInfo client_info = 1 [(field_required) = true];
 
     string url = 2; // URL to query about.
 }
@@ -29,6 +60,8 @@ message TesterRequest {
 
 // Enumeration for errors.
 enum TesterError {
+    option (enum_deprecated) = true;
+
     // No error.
     NONE = 0;
 
@@ -57,6 +90,8 @@ message TesterResponse {
 
     // Response thing embedded enum.
     enum ResponseThing {
+        option (enum_deprecated) = true;
+
         // The foo thing.
         FOO = 0;
 
@@ -84,6 +119,14 @@ message ClientInfo {
 
     // Random repeated field.
     repeated string list_of_stuff = 3;
+}
+
+// A message that has not been implemented yet.
+message UnimplementedMessage {
+    option (OwensServices.Tester.message_not_implemented) = true;
+
+    // The name.
+    string name = 1;
 }
 
 // Structure for old stuff.

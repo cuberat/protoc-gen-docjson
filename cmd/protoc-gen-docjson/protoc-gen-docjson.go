@@ -30,6 +30,7 @@ func main() {
 	debug := true
 	if debug {
 		log.SetLevel(log.DebugLevel)
+		// log.SetReportCaller(true)
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}

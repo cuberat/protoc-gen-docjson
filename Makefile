@@ -4,7 +4,7 @@ TOP_DIR = $(shell /bin/pwd)
 OUTFILE = protos.json
 READABLE_OUTFILE = protos_readable.json
 
-PROTOS = tester service-tester
+PROTOS = tester service-tester subdir/docstuff
 PROTO_DIR = $(TOP_DIR)/proto
 PROTO_FILES = $(foreach proto,$(PROTOS),$(PROTO_DIR)/$(proto).proto)
 
@@ -22,7 +22,7 @@ descriptors:
 		$(PROTO_FILES)
 
 check: plugin
-	cd $(PROTO_DIR) && protoc \
+	protoc \
 		--docjson_out="$(OUT_DIR)" \
 		--docjson_opt=outfile=$(OUTFILE),proto=$(PROTO_DIR) \
 		--plugin=$(TOP_DIR)/cmd/protoc-gen-docjson/protoc-gen-docjson \

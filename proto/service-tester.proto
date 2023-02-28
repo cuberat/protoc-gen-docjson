@@ -20,9 +20,13 @@ option java_package = "owensservices.service";
 // accumsan condimentum. Sed quis leo nec turpis maximus molestie quis sit
 // amet erat.
 service Tester {
+    option (OwensServices.Tester.service_not_implemented) = true;
+
     // Version 2 of run a test.
     rpc RunTestV2(OwensServices.Tester.TesterRequest)
-        returns (OwensServices.Tester.TesterResponse);
+        returns (OwensServices.Tester.TesterResponse) {
+            option (OwensServices.Tester.method_not_implemented) = true;
+        }
 
     // Run a test (deprecated).
     rpc RunTest(OwensServices.Tester.TesterRequest)
