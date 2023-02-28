@@ -102,6 +102,15 @@ message TesterResponse {
     // This is a thing.
     ResponseThing thing = 4;
 
+    // Comment for the second oneof.
+    oneof morestuff {
+        // Comment for another foo.
+        string another_foo = 5;
+
+        // Comment for another bar.
+        string another_bar = 6;
+    }
+
     // Comment for an embedded message.
     message EmbeddedTester {
         // Leading comment for embedded field.

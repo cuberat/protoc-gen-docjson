@@ -1,3 +1,5 @@
+github.com/cuberat/go-textparser v1.1.0 h1:CQg5cn4TKG5vzZAXdfPhGnV37489jgW2Cp3nRI2WCX0=
+github.com/cuberat/go-textparser v1.1.0/go.mod h1:8juDAO1YZr7ZqWfCSUlRBGmnCXVlwhZQhCOKrv3MA6c=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

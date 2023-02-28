@@ -105,6 +105,40 @@ func massage_data(data *docdata.TemplateData) {
 		massage_extension_data(data, file_data.Extensions)
 		massage_enum_data(data, file_data.Enums)
 	}
+
+	add_dependencies(data)
+}
+
+func add_dependencies(data *docdata.TemplateData) {
+	data.MessageDeps = make(map[string][]string, len(data.MessageMap))
+	for msg_name := range data.MessageMap {
+		deps := make([]string, 0, 1)
+		seen := make(map[string]bool, 1)
+		deps = add_message_dependencies(data, msg_name, deps, seen)
+		data.MessageDeps[msg_name] = deps
+	}
+}
+
+func add_message_dependencies(
+	data *docdata.TemplateData,
+	msg_name string,
+	deps []string,
+	seen map[string]bool,
+) []string {
+	msg := data.MessageMap[msg_name]
+	if msg == nil {
+		return deps
+	}
+
+	for _, field := range msg.Fields {
+		switch field.Kind {
+		// FIXME: add deps.
+		case "message":
+		case "enum":
+		}
+	}
+
+	return deps
 }
 
 func massage_service_data(
@@ -502,13 +536,12 @@ func get_field_data_from_desc(
 		}
 	}
 
-	if field.DefaultValue != nil {
-		this_field.DefaultValue = *field.DefaultValue
-	}
+	this_field.DefaultValue = field.GetDefaultValue()
 
 	if field.OneofIndex != nil {
-		this_field.OneofIndex = *field.OneofIndex
+		this_field.InOneof = true
 	}
+	this_field.OneofIndex = field.GetOneofIndex()
 
 	if field.Options != nil {
 		this_field.Options = field.Options

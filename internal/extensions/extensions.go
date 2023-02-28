@@ -8,9 +8,9 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	text_scanner "text/scanner"
 
 	// Third-party modules.
+	textparser "github.com/cuberat/go-textparser"
 	log "github.com/sirupsen/logrus"
 	desc_pb "google.golang.org/protobuf/types/descriptorpb"
 
@@ -357,63 +357,118 @@ func convert_ext_val(
 }
 
 func get_option_val_from_string(option_str string) string {
-	scanner := new(text_scanner.Scanner)
-	scanner.Init(strings.NewReader(option_str))
+	scanner := textparser.NewScannerString(option_str)
 
 	scanner.Scan()
 	text := scanner.TokenText()
+	log.Debugf("get_option_val_from_string: got text %q", text)
 	if text == "option" {
 		// Skip to next token.
 		scanner.Scan()
 		text = scanner.TokenText()
+		log.Debugf("get_option_val_from_string: got text %q", text)
 	}
+
 	if text != "(" {
 		log.Errorf("failed to parse option string %q: missing '('",
 			option_str)
 		return ""
 	}
 
-	tok := scanner.Scan()
-	for ; tok != text_scanner.EOF; tok = scanner.Scan() {
+	if !scanner.Scan() {
+		log.Errorf("reached end of option string %q before parsing complete",
+			option_str)
+		return ""
+	}
+
+	option_name := scanner.TokenText()
+
+	for scanner.Scan() {
 		if scanner.TokenText() == ")" {
 			break
 		}
+		option_name += scanner.TokenText()
 	}
 
-	if tok == text_scanner.EOF {
-		log.Errorf("reached end of option string %q before parsing complete",
-			option_str)
+	log.Debugf("found option name %q", option_name)
+
+	if scanner.TokenText() != ")" {
+		log.Errorf("reached end of option string %q before parsing complete:"+
+			"missing ')'", option_str)
 		return ""
 	}
 
-	if tok = scanner.Scan(); tok == text_scanner.EOF {
-		log.Errorf("reached end of option string %q before parsing complete",
-			option_str)
-		return ""
+	if !scanner.Scan() || scanner.TokenText() != "=" {
+		log.Errorf("reached end of option string %q before parsing complete:"+
+			"missing '='", option_str)
 	}
 
-	if scanner.TokenText() != "=" {
-		log.Errorf("expected '=' instead of %q in option string %s",
-			scanner.TokenText(), option_str)
-	}
-
-	if tok = scanner.Scan(); tok == text_scanner.EOF {
-		log.Errorf("reached end of option string %q before parsing complete",
-			option_str)
-		return ""
-	}
-
-	if scanner.TokenText() == "-" {
-		if tok = scanner.Scan(); tok == text_scanner.EOF {
-			log.Errorf("reached end of option string %q before parsing complete",
-				option_str)
-			return ""
-		}
-		return "-" + scanner.TokenText()
+	if !scanner.Scan() {
+		log.Errorf("reached end of option string %q before parsing complete:"+
+			"missing value", option_str)
 	}
 
 	return scanner.TokenText()
 }
+
+// func hide_get_option_val_from_string(option_str string) string {
+// 	scanner := new(text_scanner.Scanner)
+// 	scanner.Init(strings.NewReader(option_str))
+
+// 	scanner.Scan()
+// 	text := scanner.TokenText()
+// 	if text == "option" {
+// 		// Skip to next token.
+// 		scanner.Scan()
+// 		text = scanner.TokenText()
+// 	}
+// 	if text != "(" {
+// 		log.Errorf("failed to parse option string %q: missing '('",
+// 			option_str)
+// 		return ""
+// 	}
+
+// 	tok := scanner.Scan()
+// 	for ; tok != text_scanner.EOF; tok = scanner.Scan() {
+// 		if scanner.TokenText() == ")" {
+// 			break
+// 		}
+// 	}
+
+// 	if tok == text_scanner.EOF {
+// 		log.Errorf("reached end of option string %q before parsing complete",
+// 			option_str)
+// 		return ""
+// 	}
+
+// 	if tok = scanner.Scan(); tok == text_scanner.EOF {
+// 		log.Errorf("reached end of option string %q before parsing complete",
+// 			option_str)
+// 		return ""
+// 	}
+
+// 	if scanner.TokenText() != "=" {
+// 		log.Errorf("expected '=' instead of %q in option string %s",
+// 			scanner.TokenText(), option_str)
+// 	}
+
+// 	if tok = scanner.Scan(); tok == text_scanner.EOF {
+// 		log.Errorf("reached end of option string %q before parsing complete",
+// 			option_str)
+// 		return ""
+// 	}
+
+// 	if scanner.TokenText() == "-" {
+// 		if tok = scanner.Scan(); tok == text_scanner.EOF {
+// 			log.Errorf("reached end of option string %q before parsing complete",
+// 				option_str)
+// 			return ""
+// 		}
+// 		return "-" + scanner.TokenText()
+// 	}
+
+// 	return scanner.TokenText()
+// }
 
 func find_file_in_paths(paths []string, file_name string) (string, error) {
 	my_paths := make([]string, len(paths), len(paths)+1)

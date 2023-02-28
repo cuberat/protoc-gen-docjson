@@ -35,6 +35,7 @@ type FieldData struct {
 	FieldNumber   int32                  `json:"field_number"`
 	DefaultValue  string                 `json:"default_value"`
 	OneofIndex    int32                  `json:"oneof_index"`
+	InOneof       bool                   `json:"in_oneof"`
 	Options       *desc_pb.FieldOptions  `json:"options"`
 	CustomOptions map[string]interface{} `json:"custom_options"`
 
@@ -173,6 +174,8 @@ type TemplateData struct {
 	EnumList []string `json:"enum_list"`
 
 	EnumMap map[string]*EnumData `json:"enum_map"`
+
+	MessageDeps map[string][]string `json:"message_deps"`
 }
 
 func (ns Namespace) QualifyName(name string) string {
