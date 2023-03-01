@@ -30,6 +30,15 @@ check: plugin
 		$(PROTO_FILES)
 	cat $(TOP_DIR)/$(OUTFILE) | jq > $(TOP_DIR)/$(READABLE_OUTFILE)
 
+checkdebug: plugin
+	protoc \
+		--docjson_out="$(OUT_DIR)" \
+		--docjson_opt=outfile=$(OUTFILE),proto=$(PROTO_DIR),debug \
+		--plugin=$(TOP_DIR)/cmd/protoc-gen-docjson/protoc-gen-docjson \
+		-I$(PROTO_DIR) \
+		$(PROTO_FILES)
+	cat $(TOP_DIR)/$(OUTFILE) | jq > $(TOP_DIR)/$(READABLE_OUTFILE)
+
 # plugin: cmd/protoc-gen-docjson/protoc-gen-docjson
 
 plugin:

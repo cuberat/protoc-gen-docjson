@@ -36,6 +36,18 @@ func ProcessCodeGenRequest(
 			err)
 	}
 
+	plugin_opts := parse_plugin_option(gen_req.GetParameter())
+	if plugin_opts.OutFile == "" {
+		plugin_opts.OutFile = "doc.json"
+	}
+
+	if plugin_opts.Debug {
+		log.SetLevel(log.DebugLevel)
+		// log.SetReportCaller(true)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
 	files_to_generate := map[string]bool{}
 	for _, file_name := range gen_req.FileToGenerate {
 		files_to_generate[file_name] = true
@@ -43,11 +55,6 @@ func ProcessCodeGenRequest(
 
 	log.Debugf("file_to_generate: %s", gen_req.FileToGenerate)
 	log.Debugf("parameter: %s", gen_req.GetParameter())
-
-	plugin_opts := parse_plugin_option(gen_req.GetParameter())
-	if plugin_opts.OutFile == "" {
-		plugin_opts.OutFile = "doc.json"
-	}
 
 	log.Debugf("compiler_version: %s", gen_req.GetCompilerVersion())
 
@@ -107,6 +114,11 @@ func parse_plugin_option(opts string) *docdata.PluginOpts {
 
 	opts_list := strings.Split(opts, ",")
 	for _, opt := range opts_list {
+		if opt == "debug" {
+			options.Debug = true
+			continue
+		}
+
 		opt_pair := strings.SplitN(opt, "=", 2)
 		switch strings.TrimSpace(opt_pair[0]) {
 		case "outfile":

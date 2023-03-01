@@ -115,8 +115,38 @@ func add_dependencies(data *docdata.TemplateData) {
 		deps := make([]string, 0, 1)
 		seen := make(map[string]bool, 1)
 		deps = add_message_dependencies(data, msg_name, deps, seen)
+
 		data.MessageDeps[msg_name] = deps
 	}
+
+	data.ServiceDeps = make(map[string][]string, len(data.ServiceMap))
+	for svc_name, svc_data := range data.ServiceMap {
+		for _, method := range svc_data.Methods {
+			request_deps := data.MessageDeps[method.RequestFullType]
+			response_deps := data.MessageDeps[method.ResponseFullType]
+			these_deps := make([]string, len(request_deps)+len(response_deps))
+			copy(these_deps, request_deps)
+			copy(these_deps[len(request_deps):], response_deps)
+			data.ServiceDeps[svc_name] = uniquify_slice(these_deps)
+		}
+	}
+}
+
+// Generic function to produce a (new) slice of unique items from the input
+// slice.
+func uniquify_slice[E comparable](in_slice []E) []E {
+	out_slice := make([]E, 0, len(in_slice))
+	seen := make(map[E]bool, len(in_slice))
+
+	for _, e := range in_slice {
+		if seen[e] {
+			continue
+		}
+
+		out_slice = append(out_slice, e)
+	}
+
+	return out_slice
 }
 
 func add_message_dependencies(
@@ -131,11 +161,35 @@ func add_message_dependencies(
 	}
 
 	for _, field := range msg.Fields {
-		switch field.Kind {
-		// FIXME: add deps.
-		case "message":
-		case "enum":
+		if seen[field.FullTypeName] {
+			continue
 		}
+
+		switch field.Kind {
+		case "message":
+			this_msg_name := field.FullTypeName
+			seen[this_msg_name] = true
+			this_msg := data.MessageMap[this_msg_name]
+			if this_msg == nil {
+				continue
+			}
+			deps = append(deps, this_msg_name)
+			deps = add_message_dependencies(data, this_msg_name, deps, seen)
+		case "enum":
+			this_enum_name := field.FullTypeName
+			seen[this_enum_name] = true
+			deps = append(deps, this_enum_name)
+		}
+	}
+
+	for _, this_msg := range msg.NestedMessages {
+		this_msg_name := this_msg.FullName
+		if seen[this_msg_name] {
+			continue
+		}
+		seen[this_msg_name] = true
+		deps = append(deps, this_msg_name)
+		deps = add_message_dependencies(data, this_msg_name, deps, seen)
 	}
 
 	return deps
@@ -145,9 +199,17 @@ func massage_service_data(
 	data *docdata.TemplateData,
 	services []*docdata.ServiceData,
 ) {
-	data.ServiceMap = make(map[string]*docdata.ServiceData, len(services))
+	if data.ServiceMap == nil {
+		data.ServiceMap = make(map[string]*docdata.ServiceData, len(services))
+	}
+
+	if data.ServiceList == nil {
+		data.ServiceList = make([]string, len(services))
+	}
+
 	for _, service_data := range services {
 		data.ServiceMap[service_data.FullName] = service_data
+		data.ServiceList = append(data.ServiceList, service_data.FullName)
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 type Namespace []string
 
 type PluginOpts struct {
+	Debug      bool     `json:"debug"`
 	OutFile    string   `json:"outfile"`
 	ProtoPaths []string `json:"proto_paths"`
 }
@@ -154,7 +155,7 @@ type TemplateData struct {
 	FileMap map[string]*FileData `json:"file_map"`
 
 	// List of fully-qualified service names.
-	Servicelist []string `json:"service_list"`
+	ServiceList []string `json:"service_list"`
 
 	// Map of fully-qualified service names to service details.
 	ServiceMap map[string]*ServiceData `json:"service_map"`
@@ -176,6 +177,8 @@ type TemplateData struct {
 	EnumMap map[string]*EnumData `json:"enum_map"`
 
 	MessageDeps map[string][]string `json:"message_deps"`
+
+	ServiceDeps map[string][]string `json:"service_deps"`
 }
 
 func (ns Namespace) QualifyName(name string) string {

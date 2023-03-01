@@ -27,14 +27,6 @@ func main() {
 
 	flag.Parse()
 
-	debug := true
-	if debug {
-		log.SetLevel(log.DebugLevel)
-		// log.SetReportCaller(true)
-	} else {
-		log.SetLevel(log.InfoLevel)
-	}
-
 	err := plugin.ProcessCodeGenRequest(os.Stdin, os.Stdout)
 	if err != nil {
 		log.Fatalf("couldn't process code generation request: %s", err)
