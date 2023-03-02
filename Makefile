@@ -10,39 +10,25 @@ PROTO_FILES = $(foreach proto,$(PROTOS),$(PROTO_DIR)/$(proto).proto)
 
 
 OUT_DIR = $(TOP_DIR)
+BIN_DIR = $(TOP_DIR)/cmd/protoc-gen-docjson
 
-
-all: descriptors
-
-descriptors:
-	protoc \
-		--descriptor_set_out=desc.pb \
-		-I$(PROTO_DIR) \
-		--include_source_info \
-		$(PROTO_FILES)
+all: plugin
 
 check: plugin
-	protoc \
+	/usr/bin/env PATH=$(BIN_DIR):$${PATH} protoc \
 		--docjson_out="$(OUT_DIR)" \
 		--docjson_opt=outfile=$(OUTFILE),proto=$(PROTO_DIR) \
-		--plugin=$(TOP_DIR)/cmd/protoc-gen-docjson/protoc-gen-docjson \
 		-I$(PROTO_DIR) \
 		$(PROTO_FILES)
 	cat $(TOP_DIR)/$(OUTFILE) | jq > $(TOP_DIR)/$(READABLE_OUTFILE)
 
 checkdebug: plugin
-	protoc \
+	/usr/bin/env PATH=$(BIN_DIR):$${PATH} protoc \
 		--docjson_out="$(OUT_DIR)" \
 		--docjson_opt=outfile=$(OUTFILE),proto=$(PROTO_DIR),debug \
-		--plugin=$(TOP_DIR)/cmd/protoc-gen-docjson/protoc-gen-docjson \
 		-I$(PROTO_DIR) \
 		$(PROTO_FILES)
 	cat $(TOP_DIR)/$(OUTFILE) | jq > $(TOP_DIR)/$(READABLE_OUTFILE)
 
-# plugin: cmd/protoc-gen-docjson/protoc-gen-docjson
-
 plugin:
 	cd cmd/protoc-gen-docjson && go build -a
-
-# cmd/protoc-gen-docjson/protoc-gen-docjson:
-# 	cd cmd/protoc-gen-docjson && go build -a
