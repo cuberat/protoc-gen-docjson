@@ -1,5 +1,31 @@
 package extensions
 
+// BSD 2-Clause License
+//
+// Copyright (c) 2023 Don Owens <don@regexguy.com>.  All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
 import (
 	// Built-in/core modules.
 	"bufio"
@@ -22,13 +48,13 @@ import (
 type CustomOptionProcessor struct {
 	Extensions map[string]map[int32]*docdata.FileExtension
 	File       *docdata.FileData
-	PluginOpts *docdata.PluginOpts
+	Conf       *docdata.Config
 }
 
 func ProcessExtensions(
 	template_data *docdata.TemplateData,
 	file_descriptors []*desc_pb.FileDescriptorProto,
-	plugin_opts *docdata.PluginOpts,
+	conf *docdata.Config,
 ) {
 	// Collect all of the extensions so that we can resolve custom options as
 	// we walk through the structures again.
@@ -55,7 +81,7 @@ func ProcessExtensions(
 		opt_processor := &CustomOptionProcessor{
 			Extensions: extensions,
 			File:       this_file,
-			PluginOpts: plugin_opts,
+			Conf:       conf,
 		}
 
 		for _, loc := range desc_file_info.SourceCodeInfo.Location {
@@ -286,7 +312,7 @@ func (proc *CustomOptionProcessor) BuildOptionVal(
 		return "", nil, fmt.Errorf("no such extendee number %d", ext_number)
 	}
 
-	span_text := get_text_from_span(proc.File.Name, loc.Span, proc.PluginOpts)
+	span_text := get_text_from_span(proc.File.Name, loc.Span, proc.Conf)
 	if span_text == "" {
 		return "", nil,
 			fmt.Errorf("couldn't get span text for custom option %q", ext.Name)
@@ -488,9 +514,9 @@ func find_file_in_paths(paths []string, file_name string) (string, error) {
 
 func get_text_from_span(file_name string,
 	loc_span []int32,
-	plugin_opts *docdata.PluginOpts,
+	conf *docdata.Config,
 ) string {
-	file_path, err := find_file_in_paths(plugin_opts.ProtoPaths, file_name)
+	file_path, err := find_file_in_paths(conf.PluginOpts.ProtoPaths, file_name)
 	if err != nil {
 		log.Error(err)
 		return ""

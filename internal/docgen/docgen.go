@@ -1,5 +1,31 @@
 package docgen
 
+// BSD 2-Clause License
+//
+// Copyright (c) 2023 Don Owens <don@regexguy.com>.  All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
 import (
 	// Built-in/core modules.
 
@@ -16,7 +42,7 @@ import (
 )
 
 func GenDocData(
-	plugin_opts *docdata.PluginOpts,
+	conf *docdata.Config,
 	file_descriptors []*desc_pb.FileDescriptorProto,
 	files_to_generate map[string]bool,
 ) (*docdata.TemplateData, error) {
@@ -91,7 +117,7 @@ func GenDocData(
 		}
 	}
 
-	extensions.ProcessExtensions(template_data, file_descriptors, plugin_opts)
+	extensions.ProcessExtensions(template_data, file_descriptors, conf)
 
 	massage_data(template_data)
 
@@ -122,9 +148,15 @@ func add_dependencies(data *docdata.TemplateData) {
 	data.ServiceDeps = make(map[string][]string, len(data.ServiceMap))
 	for svc_name, svc_data := range data.ServiceMap {
 		for _, method := range svc_data.Methods {
-			request_deps := data.MessageDeps[method.RequestFullType]
-			response_deps := data.MessageDeps[method.ResponseFullType]
-			these_deps := make([]string, len(request_deps)+len(response_deps))
+			request_deps := make([]string, len(data.MessageDeps[method.RequestFullType])+1)
+			request_deps[0] = method.RequestFullType
+			copy(request_deps[1:], data.MessageDeps[method.RequestFullType])
+			response_deps := make([]string, len(data.MessageDeps[method.ResponseFullType])+1)
+			response_deps[0] = method.ResponseFullType
+			copy(response_deps[1:], data.MessageDeps[method.ResponseFullType])
+
+			these_deps := make([]string, len(request_deps)+len(response_deps)+2)
+			these_deps[0] = method.RequestFullType
 			copy(these_deps, request_deps)
 			copy(these_deps[len(request_deps):], response_deps)
 			data.ServiceDeps[svc_name] = uniquify_slice(these_deps)
@@ -487,16 +519,17 @@ func get_msg_data_from_desc(
 
 	msg_ns := namespace.Extend(this_msg.Name)
 
+	this_msg.OneofDecls = get_oneof_data(msg.OneofDecl, msg_ns)
+
 	fields := make([]*docdata.FieldData, 0, len(msg.Field))
 	for _, field_info := range msg.Field {
 		fields = append(fields,
-			get_field_data_from_desc(field_info, msg_ns, file_data))
+			get_field_data_from_desc(field_info, msg_ns, file_data, this_msg))
 	}
 	this_msg.Fields = fields
 
 	this_msg.Enums = get_enum_data(msg.EnumType, msg_ns, file_data)
 
-	this_msg.OneofDecls = get_oneof_data(msg.OneofDecl, msg_ns)
 	// this_msg.ExtensionRanges = msg.ExtensionRange
 	this_msg.Options = msg.Options
 
@@ -570,6 +603,7 @@ func get_field_data_from_desc(
 	field *desc_pb.FieldDescriptorProto,
 	namespace docdata.Namespace,
 	file_data *docdata.FileData,
+	msg_data *docdata.MessageData,
 ) *docdata.FieldData {
 	this_field := new(docdata.FieldData)
 
@@ -600,10 +634,13 @@ func get_field_data_from_desc(
 
 	this_field.DefaultValue = field.GetDefaultValue()
 
+	this_field.OneofIndex = field.GetOneofIndex()
 	if field.OneofIndex != nil {
 		this_field.InOneof = true
+		oneof_data := msg_data.OneofDecls[this_field.OneofIndex]
+		this_field.OneofName = oneof_data.Name
+		this_field.OneofFullName = oneof_data.FullName
 	}
-	this_field.OneofIndex = field.GetOneofIndex()
 
 	if field.Options != nil {
 		this_field.Options = field.Options

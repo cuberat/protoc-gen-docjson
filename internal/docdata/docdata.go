@@ -1,5 +1,31 @@
 package docdata
 
+// BSD 2-Clause License
+//
+// Copyright (c) 2023 Don Owens <don@regexguy.com>.  All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the following disclaimer.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
 import (
 	// Built-in/core modules.
 
@@ -13,9 +39,28 @@ import (
 type Namespace []string
 
 type PluginOpts struct {
-	Debug      bool     `json:"debug"`
-	OutFile    string   `json:"outfile"`
-	ProtoPaths []string `json:"proto_paths"`
+	Debug         bool            `json:"debug"`
+	DebugSections map[string]bool `json:"debug_sections"`
+	Diag          bool            `json:"diag"`
+	OutFile       string          `json:"outfile"`
+	ProtoPaths    []string        `json:"proto_paths"`
+}
+
+type CompilerDiag struct {
+	// Formatted version of the protobuf compiler (`protoc`).
+	Version string
+
+	// Parameter passed to the plugin. This is the value passed to the protobuf
+	// compiler (`protoc`) via the `--docjson_out` parameter.
+	PluginParameter string
+
+	// Number of files the plugin is asked to generate.
+	NumFiles int
+}
+
+type Config struct {
+	PluginOpts   *PluginOpts
+	CompilerDiag *CompilerDiag
 }
 
 type CommentData struct {
@@ -37,6 +82,8 @@ type FieldData struct {
 	DefaultValue  string                 `json:"default_value"`
 	OneofIndex    int32                  `json:"oneof_index"`
 	InOneof       bool                   `json:"in_oneof"`
+	OneofName     string                 `json:"oneof_name,omitempty"`
+	OneofFullName string                 `json:"oneof_full_name,omitempty"`
 	Options       *desc_pb.FieldOptions  `json:"options"`
 	CustomOptions map[string]interface{} `json:"custom_options"`
 
@@ -149,35 +196,41 @@ type FileData struct {
 type TemplateData struct {
 	// List of protobuf spec file names in the order provided by the protobuf
 	// compiler.
-	FileList []string `json:"file_list"`
+	FileList []string `json:"file_name_list"`
 
 	// Map of protobuf spec file name to file details.
 	FileMap map[string]*FileData `json:"file_map"`
 
 	// List of fully-qualified service names.
-	ServiceList []string `json:"service_list"`
+	ServiceList []string `json:"service_name_list"`
 
 	// Map of fully-qualified service names to service details.
 	ServiceMap map[string]*ServiceData `json:"service_map"`
 
 	// List of fully-qualified message names.
-	MessageList []string `json:"message_list"`
+	MessageList []string `json:"message_name_list"`
 
 	// Map of fully-qualified message names to message details.
 	MessageMap map[string]*MessageData `json:"message_map"`
 
 	// List of fully-qualified extension names.
-	ExtensionList []string `json:"extension_list"`
+	ExtensionList []string `json:"extension_name_list"`
 
 	// Map of fully-qualified extensions to extension details.
 	ExtensionMap map[string]*FileExtension `json:"extension_map"`
 
-	EnumList []string `json:"enum_list"`
+	// List of fully-qualified enumeration declaration names.
+	EnumList []string `json:"enum_name_list"`
 
+	// Map of fully-qualified enum declaration names to enum details.
 	EnumMap map[string]*EnumData `json:"enum_map"`
 
+	// Map of fully-qualified message names to lists of dependent message and
+	// enumeration names.
 	MessageDeps map[string][]string `json:"message_deps"`
 
+	// Map of fully-qualified service names to lists of dependent message and
+	// enumeration names.
 	ServiceDeps map[string][]string `json:"service_deps"`
 }
 
