@@ -33,7 +33,7 @@ package plugin
 
 import (
 	// Built-in/core modules.
-	"encoding/json"
+	json "encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -43,6 +43,7 @@ import (
 	proto "google.golang.org/protobuf/proto"
 	desc_pb "google.golang.org/protobuf/types/descriptorpb"
 	pluginpb "google.golang.org/protobuf/types/pluginpb"
+	yaml "gopkg.in/yaml.v3"
 
 	// Generated code.
 	// First-party modules.
@@ -88,11 +89,13 @@ func ProcessCodeGenRequest(
 		return err
 	}
 
-	file := &pluginpb.CodeGeneratorResponse_File{Name: &conf.PluginOpts.OutFile}
-	if content, err := marshal_to_json(template_data); err != nil {
+	content, err := serialize_content(template_data, conf)
+	if err != nil {
 		return send_code_gen_err(err, writer)
-	} else {
-		file.Content = &content
+	}
+	file := &pluginpb.CodeGeneratorResponse_File{
+		Name:    &conf.PluginOpts.OutFile,
+		Content: &content,
 	}
 
 	gen_resp := new(pluginpb.CodeGeneratorResponse)
@@ -101,20 +104,69 @@ func ProcessCodeGenRequest(
 	return send_code_gen_resp(gen_resp, writer)
 }
 
+func serialize_content(
+	data *docdata.TemplateData,
+	conf *docdata.Config,
+) (string, error) {
+	out_format := conf.PluginOpts.OutFormat
+	out_file := conf.PluginOpts.OutFile
+	if out_format == "" {
+		switch {
+		case strings.HasSuffix(out_file, ".yaml"):
+			fallthrough
+		case strings.HasSuffix(out_file, ".yml"):
+			out_format = "yaml"
+		case strings.HasSuffix(out_file, ".json"):
+			out_format = "json"
+		default:
+			out_format = "json"
+		}
+	}
+
+	defer func() {
+		if conf.PluginOpts.OutFile == "" {
+			conf.PluginOpts.OutFile = "doc." + out_format
+		}
+	}()
+
+	switch out_format {
+	case "yaml":
+		return marshal_to_yaml(data)
+	default:
+		return marshal_to_json(data)
+	}
+}
+
 func marshal_to_json(data interface{}) (string, error) {
-	json_bytes, err := json.Marshal(data)
+	buffer_bytes, err := json.Marshal(data)
+	// marshaler := &protojson.MarshalOptions{
+	// 	Multiline:       false,
+	// 	Indent:          "",
+	// 	AllowPartial:    true,
+	// 	UseProtoNames:   true,
+	// 	UseEnumNumbers:  false,
+	// 	EmitUnpopulated: true,
+	// 	// Resolver: nil,
+	// }
+	// buffer_bytes, err := marshaler.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("couldn't marshal to JSON: %w", err)
 	}
 
-	return string(json_bytes), nil
+	return string(buffer_bytes), nil
+}
+
+func marshal_to_yaml(data interface{}) (string, error) {
+	buffer_bytes, err := yaml.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("couldn't marshal to YAML: %w", err)
+	}
+
+	return string(buffer_bytes), nil
 }
 
 func setup_config(gen_req *pluginpb.CodeGeneratorRequest) *docdata.Config {
 	plugin_opts := parse_plugin_option(gen_req.GetParameter())
-	if plugin_opts.OutFile == "" {
-		plugin_opts.OutFile = "doc.json"
-	}
 
 	conf := &docdata.Config{
 		PluginOpts: plugin_opts,
@@ -186,6 +238,8 @@ func parse_plugin_option(opts string) *docdata.PluginOpts {
 			options.Diag = true
 		case "debug":
 			options.DebugSections[opt_pair[1]] = true
+		case "outfmt":
+			options.OutFormat = opt_pair[1]
 		}
 	}
 

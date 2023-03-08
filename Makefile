@@ -30,5 +30,12 @@ checkdebug: plugin
 		$(PROTO_FILES)
 	cat $(TOP_DIR)/$(OUTFILE) | jq > $(TOP_DIR)/$(READABLE_OUTFILE)
 
+checkyaml: plugin
+	/usr/bin/env PATH=$(BIN_DIR):$${PATH} protoc \
+		--docjson_out="$(OUT_DIR)" \
+		--docjson_opt=proto=$(PROTO_DIR),outfmt=yaml \
+		-I$(PROTO_DIR) \
+		$(PROTO_FILES)
+
 plugin:
 	cd cmd/protoc-gen-docjson && go build -a

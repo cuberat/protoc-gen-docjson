@@ -75,7 +75,9 @@ func GenDocData(
 					append(this_file.ExternalDependencies, file)
 			}
 		}
-		this_file.Options = desc_file_info.Options
+
+		set_file_options(this_file, desc_file_info)
+		// this_file.Options = desc_file_info.Options
 
 		this_file.Syntax = new(docdata.SyntaxDecl)
 		if desc_file_info.Syntax != nil {
@@ -122,6 +124,30 @@ func GenDocData(
 	massage_data(template_data)
 
 	return template_data, nil
+}
+
+func set_file_options(
+	this_file *docdata.FileData,
+	desc_file *desc_pb.FileDescriptorProto,
+) {
+	fopts := desc_file.Options
+	this_file.Options = &docdata.FileOptions{
+
+		JavaPackage:          fopts.GetJavaPackage(),
+		JavaOuterClassname:   fopts.GetJavaOuterClassname(),
+		JavaMultipleFiles:    fopts.GetJavaMultipleFiles(),
+		JavaStringCheckUtf8:  fopts.GetJavaStringCheckUtf8(),
+		GoPackage:            fopts.GetGoPackage(),
+		Deprecated:           fopts.GetDeprecated(),
+		CcEnableArenas:       fopts.GetCcEnableArenas(),
+		ObjcClassPrefix:      fopts.GetObjcClassPrefix(),
+		CsharpNamespace:      fopts.GetCsharpNamespace(),
+		SwiftPrefix:          fopts.GetSwiftPrefix(),
+		PhpClassPrefix:       fopts.GetPhpClassPrefix(),
+		PhpNamespace:         fopts.GetPhpNamespace(),
+		PhpMetadataNamespace: fopts.GetPhpMetadataNamespace(),
+		RubyPackage:          fopts.GetRubyPackage(),
+	}
 }
 
 func massage_data(data *docdata.TemplateData) {
@@ -313,12 +339,27 @@ func get_service_data(
 		}
 		this_svc.Methods = methods
 
-		this_svc.Options = desc.Options
+		set_service_options(this_svc, desc)
+		// this_svc.Options = desc.Options
 
 		svc_data = append(svc_data, this_svc)
 	}
 
 	return svc_data
+}
+
+func set_service_options(
+	this_svc *docdata.ServiceData,
+	desc_svc *desc_pb.ServiceDescriptorProto,
+) {
+	svc_opts := desc_svc.Options
+	if svc_opts == nil {
+		svc_opts = new(desc_pb.ServiceOptions)
+	}
+
+	this_svc.Options = &docdata.ServiceOptions{
+		Deprecated: svc_opts.GetDeprecated(),
+	}
 }
 
 func get_method_data_from_desc(
@@ -336,9 +377,23 @@ func get_method_data_from_desc(
 	method_data.ResponseType, method_data.ResponseFullType =
 		extract_type_names(desc_method.GetOutputType())
 	method_data.ResponseStreaming = desc_method.GetServerStreaming()
-	method_data.Options = desc_method.GetOptions()
+	// method_data.Options = desc_method.GetOptions()
 
 	return method_data
+}
+
+func set_method_options(
+	this_method *docdata.MethodData,
+	desc_method *desc_pb.MethodDescriptorProto,
+) {
+	method_opts := desc_method.Options
+	if method_opts == nil {
+		method_opts = new(desc_pb.MethodOptions)
+	}
+
+	this_method.Options = &docdata.MethodOptions{
+		Deprecated: method_opts.GetDeprecated(),
+	}
 }
 
 func extract_type_names(
@@ -531,7 +586,15 @@ func get_msg_data_from_desc(
 	this_msg.Enums = get_enum_data(msg.EnumType, msg_ns, file_data)
 
 	// this_msg.ExtensionRanges = msg.ExtensionRange
-	this_msg.Options = msg.Options
+	// this_msg.Options = msg.Options
+	set_message_options(this_msg, msg)
+	// if msg.Options != nil {
+	// 	msg_opts := msg.Options
+	// 	this_msg.Options = &docdata.MessageOptions{
+	// 		Deprecated: msg_opts.GetDeprecated(),
+	// 		MapEntry:   msg_opts.GetMapEntry(),
+	// 	}
+	// }
 
 	if len(msg.NestedType) > 0 {
 		for _, nested_msg := range msg.NestedType {
@@ -541,6 +604,21 @@ func get_msg_data_from_desc(
 	}
 
 	return this_msg
+}
+
+func set_message_options(
+	this_msg *docdata.MessageData,
+	desc_msg *desc_pb.DescriptorProto,
+) {
+	msg_opts := desc_msg.GetOptions()
+	if msg_opts == nil {
+		msg_opts = new(desc_pb.MessageOptions)
+	}
+
+	this_msg.Options = &docdata.MessageOptions{
+		Deprecated: msg_opts.GetDeprecated(),
+		MapEntry:   msg_opts.GetMapEntry(),
+	}
 }
 
 func get_oneof_data(
@@ -588,15 +666,46 @@ func get_enum_data(
 				this_val.Number = *value.Number
 			}
 
-			this_val.Options = value.Options
+			set_enum_val_options(this_val, value)
+			// this_val.Options = value.Options
 
 			this_enum.Values = append(this_enum.Values, this_val)
 		}
 
-		this_enum.Options = desc_enum.Options
+		set_enum_options(this_enum, desc_enum)
+		// this_enum.Options = desc_enum.Options
 	}
 
 	return enum_data
+}
+
+func set_enum_val_options(
+	this_enum_val *docdata.EnumValue,
+	desc_enum_val *desc_pb.EnumValueDescriptorProto,
+) {
+	enum_val_opts := desc_enum_val.Options
+	if enum_val_opts == nil {
+		enum_val_opts = new(desc_pb.EnumValueOptions)
+	}
+
+	this_enum_val.Options = &docdata.EnumValueOptions{
+		Deprecated: enum_val_opts.GetDeprecated(),
+	}
+}
+
+func set_enum_options(
+	this_enum *docdata.EnumData,
+	desc_enum *desc_pb.EnumDescriptorProto,
+) {
+	enum_opts := desc_enum.Options
+	if enum_opts == nil {
+		enum_opts = new(desc_pb.EnumOptions)
+	}
+
+	this_enum.Options = &docdata.EnumOptions{
+		AllowAlias: enum_opts.GetAllowAlias(),
+		Deprecated: enum_opts.GetDeprecated(),
+	}
 }
 
 func get_field_data_from_desc(
@@ -643,7 +752,14 @@ func get_field_data_from_desc(
 	}
 
 	if field.Options != nil {
-		this_field.Options = field.Options
+		fopts := field.Options
+		this_field.Options = &docdata.FieldOptions{
+			CType:      fopts.GetCtype(),
+			Packed:     fopts.GetPacked(),
+			JSType:     fopts.GetJstype(),
+			Lazy:       fopts.GetLazy(),
+			Deprecated: fopts.GetDeprecated(),
+		}
 	}
 
 	this_field.CustomOptions = make(map[string]interface{}, 0)
