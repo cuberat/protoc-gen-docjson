@@ -5,7 +5,7 @@ OUTFILE = protos.json
 READABLE_OUTFILE = protos_readable.json
 
 PROTOS = tester service-tester subdir/docstuff
-PROTO_DIR = $(TOP_DIR)/proto
+PROTO_DIR = $(TOP_DIR)/tests/data/proto1
 PROTO_FILES = $(foreach proto,$(PROTOS),$(PROTO_DIR)/$(proto).proto)
 
 

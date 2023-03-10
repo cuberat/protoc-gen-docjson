@@ -312,7 +312,7 @@ func (proc *CustomOptionProcessor) BuildOptionVal(
 		return "", nil, fmt.Errorf("no such extendee number %d", ext_number)
 	}
 
-	span_text := get_text_from_span(proc.File.Name, loc.Span, proc.Conf)
+	span_text := GetTextFromSpan(proc.File.Name, loc.Span, proc.Conf)
 	if span_text == "" {
 		return "", nil,
 			fmt.Errorf("couldn't get span text for custom option %q", ext.Name)
@@ -512,7 +512,7 @@ func find_file_in_paths(paths []string, file_name string) (string, error) {
 		file_name, paths)
 }
 
-func get_text_from_span(file_name string,
+func GetTextFromSpan(file_name string,
 	loc_span []int32,
 	conf *docdata.Config,
 ) string {

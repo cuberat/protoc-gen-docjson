@@ -164,6 +164,7 @@ type MessageData struct {
 }
 
 type FileExtension struct {
+	CommentData
 	Name        string `json:"name"`
 	FullName    string `json:"full_name"`
 	FieldNumber int32  `json:"field_number"`

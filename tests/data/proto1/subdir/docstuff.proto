@@ -1,0 +1,13 @@
+/*
+ * Syntax leading comment for a proto file in a subdirectory.
+ */
+
+syntax = "proto3";
+
+package MyServices.Tester.Subdir;
+
+// Leading comment for Stuff.
+message Stuff {
+    // Leading comment for field1.
+    string field1 = 1;
+}

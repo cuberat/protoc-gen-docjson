@@ -1,0 +1,37 @@
+/*
+ * Leading detached comment for the syntax statement.
+ */
+
+syntax = "proto3";
+
+import "tester.proto";
+
+package MyServices.Service;
+
+option go_package = "myservices/grpc/service";
+option java_package = "myservices.service";
+
+// Tester service. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+// Suspendisse a cursus mauris. Proin porta mi nisl, vel iaculis leo mattis
+// ut. Maecenas lacus urna, dapibus sit amet leo id, rutrum fermentum justo.
+// Cras porta, nulla vel euismod maximus, lacus magna ultrices metus, sit amet
+// eleifend lacus libero et lacus. Cras a facilisis est. Praesent augue nisl,
+// tincidunt vel ex mattis, efficitur fermentum sem. Ut congue tellus ut
+// accumsan condimentum. Sed quis leo nec turpis maximus molestie quis sit
+// amet erat.
+service Tester {
+    option (MyServices.Tester.service_not_implemented) = true;
+
+    // Leading comment for the RunTestV2 method which is marked not_implemented
+    // via a custom option method_not_implemented.
+    rpc RunTestV2(MyServices.Tester.TesterRequest)
+        returns (MyServices.Tester.TesterResponse) {
+            option (MyServices.Tester.method_not_implemented) = true;
+        }
+
+    // Leading comment for the RunTest method is which marked deprecated.
+    rpc RunTest(MyServices.Tester.TesterRequest)
+        returns (MyServices.Tester.TesterResponse) {
+            option deprecated = true;
+        }
+}
