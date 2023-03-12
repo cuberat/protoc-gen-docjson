@@ -1,5 +1,5 @@
-name: Makefile CI for dev
-run-name: Unit tests on dev branch
+name: Unit tests (dev)
+run-name: Unit tests (dev)
 
 on:
   push:
