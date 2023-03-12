@@ -14,11 +14,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: configure
-      run: ./configure
+    # - name: configure
+    #   run: ./configure
 
     - name: Install dependencies
-      run: apt-get -y install protobuf-compiler && make check
+      run: apt-get -y install protobuf-compiler
+      
+    - name: Build plugin
+      run: make check
 
     - name: Run check
       run: make check
