@@ -1,4 +1,4 @@
-name: Unit tests (dev)
+name: CI (dev)
 run-name: Unit tests (dev)
 
 on:

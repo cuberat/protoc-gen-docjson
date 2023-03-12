@@ -1,4 +1,4 @@
-name: Unit tests (main)
+name: CI (main)
 run-name: Unit tests (main)
 
 on:
