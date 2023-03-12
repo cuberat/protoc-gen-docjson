@@ -39,6 +39,7 @@ import (
 	"strings"
 
 	// Third-party modules.
+
 	log "github.com/sirupsen/logrus"
 	proto "google.golang.org/protobuf/proto"
 	desc_pb "google.golang.org/protobuf/types/descriptorpb"
@@ -137,7 +138,7 @@ func serialize_content(
 	}
 }
 
-func marshal_to_json(data interface{}) (string, error) {
+func marshal_to_json(data any) (string, error) {
 	buffer_bytes, err := json.Marshal(data)
 	// marshaler := &protojson.MarshalOptions{
 	// 	Multiline:       false,
@@ -156,7 +157,7 @@ func marshal_to_json(data interface{}) (string, error) {
 	return string(buffer_bytes), nil
 }
 
-func marshal_to_yaml(data interface{}) (string, error) {
+func marshal_to_yaml(data any) (string, error) {
 	buffer_bytes, err := yaml.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("couldn't marshal to YAML: %w", err)

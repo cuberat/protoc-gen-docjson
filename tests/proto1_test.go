@@ -19,7 +19,7 @@ func TestComments(t *testing.T) {
 		return
 	}
 
-	if !t.Run("Len checks",
+	if !t.Run("len check",
 		func(st *testing.T) {
 			do_len_checks(st, data)
 		},
@@ -28,12 +28,90 @@ func TestComments(t *testing.T) {
 		return
 	}
 
-	t.Run("Syntax data check",
+	t.Run("syntax data check",
 		func(st *testing.T) {
 			do_check_syntax(st, data)
 		},
 	)
 
+	t.Run("svc check",
+		func(st *testing.T) {
+			do_check_services(st, data)
+		},
+	)
+
+	t.Run("file check",
+		func(st *testing.T) {
+			do_check_files(st, data)
+		},
+	)
+
+	t.Run("msg check",
+		func(st *testing.T) {
+			do_check_messages(st, data)
+		},
+	)
+
+	t.Run("extension check",
+		func(st *testing.T) {
+			do_check_extensions(st, data)
+		},
+	)
+
+	t.Run("enum check",
+		func(st *testing.T) {
+			do_check_enums(st, data)
+		},
+	)
+}
+
+func do_check_services(t *testing.T, data map[string]any) {
+	svc_map, ok := data["service_map"].(map[string]any)
+	if !ok {
+		t.Errorf("Wrong type for service_map: %T", data["service_map"])
+		return
+	}
+
+	svc_name := "MyServices.Service.Tester"
+	svc, ok := svc_map[svc_name].(map[string]any)
+	if !ok {
+		t.Errorf("Wrong type for service: %T", svc_map["service_name"])
+		return
+	}
+
+	_ = svc
+	// FIXME: complete service checks: comments on service and methods.
+
+	// for _, svc_name_any := range svc_name_list {
+	// 	svc_name, ok := svc_name_any.(string)
+	// 	if !ok {
+	// 		t.Errorf("Wrong type for service name: %T", svc_name_any)
+	// 		return
+	// 	}
+	// 	svc, ok := svc_map[svc_name].(map[string]any)
+	// 	if !ok {
+	// 		t.Errorf("Wrong type for service: %T", svc_map["service_name"])
+	// 		return
+	// 	}
+
+	// 	_ = svc
+	// }
+}
+
+func do_check_files(t *testing.T, data map[string]any) {
+	// FIXME: complete file checks, e.g., extensions.
+}
+
+func do_check_messages(t *testing.T, data map[string]any) {
+	// FIXME: complete message checks.
+}
+
+func do_check_extensions(t *testing.T, data map[string]any) {
+	// FIXME: complete extension checks.
+}
+
+func do_check_enums(t *testing.T, data map[string]any) {
+	// FIXME: complete extension checks.
 }
 
 func do_check_syntax(t *testing.T, data map[string]any) {
@@ -65,7 +143,7 @@ func do_check_syntax(t *testing.T, data map[string]any) {
 	check_comment_field(t, syntax_data, field_desc, "description",
 		"This is the syntax statement leading comment. This is a trailing comment for syntax.")
 	check_comment_list(t, syntax_data, field_desc, "leading_detached_comments",
-		[]string{"\n Leading detached comment for the syntax statement.\n A second line.\n"})
+		[]string{"Leading detached comment for the syntax statement.\n A second line."})
 }
 
 func check_comment_list(
@@ -149,8 +227,8 @@ func check_length(
 		return false
 	}
 	if len(name_list) != expected_len {
-		t.Errorf("wrong length for %s: got %d, expected %d", list_field_name,
-			len(name_list), expected_len)
+		t.Errorf("wrong length for %s: got %d, expected %d: list=%v",
+			list_field_name, len(name_list), expected_len, name_list)
 		return false
 	}
 
@@ -181,6 +259,8 @@ func do_setup(t *testing.T) (map[string]any, bool) {
 	bin_dir := path.Join(cur_dir, "../cmd/protoc-gen-docjson")
 	out_file_name := "docs.json"
 
+	// Could also use t.TempDir() here, which would get cleaned up automatically
+	// once the test is complete.
 	json_out_dir, err := os.MkdirTemp("", "test_protoc-gen-docjson_*")
 	if err != nil {
 		t.Errorf("couldn't create temporary directory: %s", err)

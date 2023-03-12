@@ -94,8 +94,8 @@ type FieldData struct {
 	OneofName     string `json:"oneof_name"`
 	OneofFullName string `json:"oneof_full_name"`
 	// Options       *desc_pb.FieldOptions  `json:"options"`
-	Options       *FieldOptions          `json:"options"`
-	CustomOptions map[string]interface{} `json:"custom_options"`
+	Options       *FieldOptions  `json:"options"`
+	CustomOptions map[string]any `json:"custom_options"`
 
 	// File this field was defined in.
 	DefinedIn string `json:"defined_in"`
@@ -120,7 +120,7 @@ type EnumValue struct {
 	Name          string
 	Number        int32
 	Options       *EnumValueOptions `json:"options"`
-	CustomOptions []string          `json:"custom_options"`
+	CustomOptions map[string]any    `json:"custom_options"`
 }
 
 type EnumOptions struct {
@@ -130,12 +130,12 @@ type EnumOptions struct {
 
 type EnumData struct {
 	CommentData
-	Name          string                 `json:"name"`
-	FullName      string                 `json:"full_name"`
-	Description   string                 `json:"description"`
-	Values        []*EnumValue           `json:"values"`
-	Options       *EnumOptions           `json:"options"`
-	CustomOptions map[string]interface{} `json:"custom_options"`
+	Name          string         `json:"name"`
+	FullName      string         `json:"full_name"`
+	Description   string         `json:"description"`
+	Values        []*EnumValue   `json:"values"`
+	Options       *EnumOptions   `json:"options"`
+	CustomOptions map[string]any `json:"custom_options"`
 
 	// File this enum was defined in.
 	DefinedIn string `json:"defined_in"`
@@ -156,8 +156,8 @@ type MessageData struct {
 	// ExtensionRanges []*desc_pb.DescriptorProto_ExtensionRange `json:"extension_ranges"`
 	OneofDecls []*OneOfData `json:"oneof_decl"`
 	// Options       *desc_pb.MessageOptions `json:"options"`
-	Options       *MessageOptions        `json:"options"`
-	CustomOptions map[string]interface{} `json:"custom_options"`
+	Options       *MessageOptions `json:"options"`
+	CustomOptions map[string]any  `json:"custom_options"`
 
 	// File this message was defined in.
 	DefinedIn string `json:"defined_in"`
@@ -195,8 +195,8 @@ type MethodData struct {
 	ResponseFullType  string `json:"response_full_type"`
 	ResponseStreaming bool   `json:"response_streaming"`
 	// Options           *desc_pb.MethodOptions `json:"options"`
-	Options       *MethodOptions         `json:"options"`
-	CustomOptions map[string]interface{} `json:"custom_options"`
+	Options       *MethodOptions `json:"options"`
+	CustomOptions map[string]any `json:"custom_options"`
 
 	// File this method was defined in.
 	DefinedIn string `json:"defined_in"`
@@ -208,11 +208,11 @@ type ServiceOptions struct {
 
 type ServiceData struct {
 	CommentData
-	Name          string                 `json:"name"`
-	FullName      string                 `json:"full_name"`
-	Methods       []*MethodData          `json:"methods"`
-	Options       *ServiceOptions        `json:"options"`
-	CustomOptions map[string]interface{} `json:"custom_options"`
+	Name          string          `json:"name"`
+	FullName      string          `json:"full_name"`
+	Methods       []*MethodData   `json:"methods"`
+	Options       *ServiceOptions `json:"options"`
+	CustomOptions map[string]any  `json:"custom_options"`
 
 	// File this service was defined in.
 	DefinedIn string `json:"defined_in"`
@@ -244,10 +244,10 @@ type FileData struct {
 	Dependencies         []string       `json:"dependencies"`
 	ExternalDependencies []string       `json:"external_dependencies"`
 	// Options              *desc_pb.FileOptions   `json:"options"`
-	Options       *FileOptions           `json:"options"`
-	Extensions    []*FileExtension       `json:"extensions"`
-	Syntax        *SyntaxDecl            `json:"syntax"`
-	CustomOptions map[string]interface{} `json:"custom_options"`
+	Options       *FileOptions     `json:"options"`
+	Extensions    []*FileExtension `json:"extensions"`
+	Syntax        *SyntaxDecl      `json:"syntax"`
+	CustomOptions map[string]any   `json:"custom_options"`
 }
 
 type TemplateData struct {
