@@ -1,4 +1,5 @@
 name: Makefile CI
+run-name: Unit tests on main branch
 
 on:
   push:
