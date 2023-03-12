@@ -39,3 +39,6 @@ checkyaml: plugin
 
 plugin:
 	cd cmd/protoc-gen-docjson && go build -a
+
+test: plugin
+	cd tests && go test
