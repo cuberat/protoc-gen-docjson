@@ -81,19 +81,18 @@ type FieldOptions struct {
 
 type FieldData struct {
 	CommentData
-	TypeName      string `json:"type"`
-	FullTypeName  string `json:"full_type"`
-	Kind          string `json:"kind"`
-	Name          string `json:"name"`
-	FullName      string `json:"full_name"`
-	Label         string `json:"label"`
-	FieldNumber   int32  `json:"field_number"`
-	DefaultValue  string `json:"default_value"`
-	OneofIndex    int32  `json:"oneof_index"`
-	InOneof       bool   `json:"in_oneof"`
-	OneofName     string `json:"oneof_name"`
-	OneofFullName string `json:"oneof_full_name"`
-	// Options       *desc_pb.FieldOptions  `json:"options"`
+	TypeName      string         `json:"type"`
+	FullTypeName  string         `json:"full_type"`
+	Kind          string         `json:"kind"`
+	Name          string         `json:"name"`
+	FullName      string         `json:"full_name"`
+	Label         string         `json:"label"`
+	FieldNumber   int32          `json:"field_number"`
+	DefaultValue  string         `json:"default_value"`
+	OneofIndex    int32          `json:"oneof_index"`
+	InOneof       bool           `json:"in_oneof"`
+	OneofName     string         `json:"oneof_name"`
+	OneofFullName string         `json:"oneof_full_name"`
 	Options       *FieldOptions  `json:"options"`
 	CustomOptions map[string]any `json:"custom_options"`
 
@@ -117,8 +116,8 @@ type EnumValueOptions struct {
 
 type EnumValue struct {
 	CommentData
-	Name          string
-	Number        int32
+	Name          string            `json:"name"`
+	Number        int32             `json:"number"`
 	Options       *EnumValueOptions `json:"options"`
 	CustomOptions map[string]any    `json:"custom_options"`
 }
@@ -148,16 +147,14 @@ type MessageOptions struct {
 
 type MessageData struct {
 	CommentData
-	Name           string         `json:"name"`
-	FullName       string         `json:"full_name"`
-	Fields         []*FieldData   `json:"fields"`
-	NestedMessages []*MessageData `json:"nested_messages"`
-	Enums          []*EnumData    `json:"enums"`
-	// ExtensionRanges []*desc_pb.DescriptorProto_ExtensionRange `json:"extension_ranges"`
-	OneofDecls []*OneOfData `json:"oneof_decl"`
-	// Options       *desc_pb.MessageOptions `json:"options"`
-	Options       *MessageOptions `json:"options"`
-	CustomOptions map[string]any  `json:"custom_options"`
+	Name           string          `json:"name"`
+	FullName       string          `json:"full_name"`
+	Fields         []*FieldData    `json:"fields"`
+	NestedMessages []*MessageData  `json:"nested_messages"`
+	Enums          []*EnumData     `json:"enums"`
+	OneofDecls     []*OneOfData    `json:"oneof_decl"`
+	Options        *MessageOptions `json:"options"`
+	CustomOptions  map[string]any  `json:"custom_options"`
 
 	// File this message was defined in.
 	DefinedIn string `json:"defined_in"`
@@ -186,17 +183,16 @@ type MethodOptions struct {
 
 type MethodData struct {
 	CommentData
-	Name              string `json:"name"`
-	FullName          string `json:"full_name"`
-	RequestType       string `json:"request_type"`
-	RequestFullType   string `json:"request_full_type"`
-	RequestStreaming  bool   `json:"request_streaming"`
-	ResponseType      string `json:"response_type"`
-	ResponseFullType  string `json:"response_full_type"`
-	ResponseStreaming bool   `json:"response_streaming"`
-	// Options           *desc_pb.MethodOptions `json:"options"`
-	Options       *MethodOptions `json:"options"`
-	CustomOptions map[string]any `json:"custom_options"`
+	Name              string         `json:"name"`
+	FullName          string         `json:"full_name"`
+	RequestType       string         `json:"request_type"`
+	RequestFullType   string         `json:"request_full_type"`
+	RequestStreaming  bool           `json:"request_streaming"`
+	ResponseType      string         `json:"response_type"`
+	ResponseFullType  string         `json:"response_full_type"`
+	ResponseStreaming bool           `json:"response_streaming"`
+	Options           *MethodOptions `json:"options"`
+	CustomOptions     map[string]any `json:"custom_options"`
 
 	// File this method was defined in.
 	DefinedIn string `json:"defined_in"`
@@ -236,18 +232,20 @@ type FileOptions struct {
 }
 
 type FileData struct {
-	Name                 string         `json:"name"`
-	Package              string         `json:"package"`
-	Messages             []*MessageData `json:"messages"`
-	Enums                []*EnumData    `json:"enums"`
-	Services             []*ServiceData `json:"services"`
-	Dependencies         []string       `json:"dependencies"`
-	ExternalDependencies []string       `json:"external_dependencies"`
-	// Options              *desc_pb.FileOptions   `json:"options"`
-	Options       *FileOptions     `json:"options"`
-	Extensions    []*FileExtension `json:"extensions"`
-	Syntax        *SyntaxDecl      `json:"syntax"`
-	CustomOptions map[string]any   `json:"custom_options"`
+	Name                 string           `json:"name"`
+	Package              string           `json:"package"`
+	Messages             []*MessageData   `json:"messages"`
+	Enums                []*EnumData      `json:"enums"`
+	Services             []*ServiceData   `json:"services"`
+	Dependencies         []string         `json:"dependencies"`
+	ExternalDependencies []string         `json:"external_dependencies"`
+	Options              *FileOptions     `json:"options"`
+	Extensions           []*FileExtension `json:"extensions"`
+	Syntax               *SyntaxDecl      `json:"syntax"`
+	CustomOptions        map[string]any   `json:"custom_options"`
+
+	// File extensions that extend protobuf option messages.
+	DeclaredCustomOptions map[string][]*FileExtension `json:"declared_custom_options"`
 }
 
 type TemplateData struct {

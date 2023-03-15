@@ -72,7 +72,7 @@ enum TesterError {
     // Leading comment for enum value PBKAC.
     PBKAC = 1; // Trailing comment for enum value PBKAC.
 
-    INTERN = 2; // Trailin gcomment for enum value INTERN.
+    INTERN = 2; // Trailing comment for enum value INTERN.
 }
 
 // Leading comment for the TesterResponse message.

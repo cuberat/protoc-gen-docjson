@@ -42,6 +42,15 @@ import (
 	extensions "github.com/cuberat/protoc-gen-docjson/internal/extensions"
 )
 
+var CUSTOM_OPTION_TYPES = map[string]string{
+	".google.protobuf.FileOptions":      "file",
+	".google.protobuf.ServiceOptions":   "service",
+	".google.protobuf.MessageOptions":   "message",
+	".google.protobuf.FieldOptions":     "field",
+	".google.protobuf.EnumOptions":      "enum_decl",
+	".google.protobuf.EnumValueOptions": "enum_val",
+}
+
 func GenDocData(
 	conf *docdata.Config,
 	file_descriptors []*desc_pb.FileDescriptorProto,
@@ -96,6 +105,10 @@ func GenDocData(
 			this_file)
 		this_file.Services = get_service_data(desc_file_info.Service, namespace, this_file)
 
+		this_file.DeclaredCustomOptions = make(
+			map[string][]*docdata.FileExtension,
+			len(desc_file_info.Extension),
+		)
 		this_file.Extensions = make([]*docdata.FileExtension, 0)
 		for _, extension := range desc_file_info.Extension {
 			this_extension := new(docdata.FileExtension)
@@ -111,6 +124,12 @@ func GenDocData(
 			}
 
 			this_extension.Extendee = extension.GetExtendee()
+
+			option_type, ok := CUSTOM_OPTION_TYPES[this_extension.Extendee]
+			if ok {
+				this_option_type := this_file.DeclaredCustomOptions[option_type]
+				this_file.DeclaredCustomOptions[option_type] = append(this_option_type, this_extension)
+			}
 
 			this_file.Extensions =
 				append(this_file.Extensions, this_extension)
