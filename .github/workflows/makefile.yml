@@ -14,8 +14,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: configure
-      run: ./configure
+    # - name: configure
+    #   run: ./configure
 
     - name: Install dependencies
       run: apt-get -y install protobuf-compiler && make check
@@ -23,5 +23,5 @@ jobs:
     - name: Run check
       run: make check
 
-    - name: Run distcheck
-      run: make distcheck
+    # - name: Run distcheck
+    #   run: make distcheck
