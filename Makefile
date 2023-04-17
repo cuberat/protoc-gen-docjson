@@ -42,3 +42,6 @@ plugin:
 
 test: plugin
 	cd tests && go test
+
+testv: plugin
+	cd tests && go test -v
