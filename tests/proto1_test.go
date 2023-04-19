@@ -558,8 +558,6 @@ func check_extensions(
 		})
 
 	}
-
-	// FIXME: complete extension checks.
 }
 
 func check_one_extension(
@@ -567,9 +565,6 @@ func check_one_extension(
 	ext, ext_test_spec map[string]any,
 	label string,
 ) {
-	// t.Run("comments", func(st *testing.T) {
-	// 	check_comments(st, ext, ext_test_spec, label)
-	// })
 	check_fields_equal(t, ext, ext_test_spec, label, nil)
 }
 
@@ -585,7 +580,6 @@ func check_fields_equal(
 	}
 
 	for _, field := range field_list {
-		// label := fmt.Sprintf("field_%s", field)
 		if !reflect.DeepEqual(data[field], test_spec[field]) {
 			t.Errorf("discrepancy with field %s: got %v (%T), expected %v (%T)",
 				field, data[field], data[field], test_spec[field], test_spec[field])
@@ -594,7 +588,61 @@ func check_fields_equal(
 }
 
 func do_check_enums(t *testing.T, data map[string]any) {
-	// FIXME: complete enum checks.
+	expected := map[string]any{
+		"leading_comments":  "Leading comment for enum TesterError.",
+		"trailing_comments": "",
+		"leading_detached_comments": []string{
+			"Detached leading comment for enum TesterError",
+		},
+		"name":        "TesterError",
+		"full_name":   "MyServices.Tester.TesterError",
+		"description": "Leading comment for enum TesterError.",
+		"values": []map[string]any{
+			{
+				"description":               "Leading comment for enum value NONE.",
+				"leading_comments":          "Leading comment for enum value NONE.",
+				"trailing_comments":         "",
+				"leading_detached_comments": []string{},
+				"Name":                      "NONE",
+				"Number":                    0,
+				"options": map[string]any{
+					"deprecated": false,
+				},
+				"custom_options": map[string]any{},
+			},
+		},
+		"options": map[string]any{
+			"allow_alias": false,
+			"deprecated":  false,
+		},
+		"custom_options": map[string]any{
+			"enum_deprecated": true,
+		},
+		"defined_in": "tester.proto",
+	}
+
+	enum_map := data["enum_map"].(map[string]any)
+	this_enum := enum_map["MyServices.Tester.TesterError"].(map[string]any)
+
+	check_comments(t, this_enum, expected, "enum MyServices.Tester.TesterError")
+
+	enum_vals := this_enum["values"].([]any)
+	if len(enum_vals) != 3 {
+		t.Errorf("incorrect number of values for enum "+
+			"MyServices.Tester.TesterError: got %d, expected 3",
+			len(enum_vals))
+	}
+
+	enum_val_0 := enum_vals[0].(map[string]any)
+	expected_enum_vals := expected["values"].([]map[string]any)
+	exp_val_0 := expected_enum_vals[0]
+
+	check_comments(t, enum_val_0, exp_val_0,
+		"val 0 from enum MyServices.Tester.TesterError")
+
+	do_check_options(t, this_enum, expected,
+		"options for enum MyServices.Tester.TesterError")
+
 }
 
 func do_check_syntax(t *testing.T, data map[string]any) {
