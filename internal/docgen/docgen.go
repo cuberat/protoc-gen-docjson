@@ -286,7 +286,7 @@ func massage_service_data(
 	}
 
 	if data.ServiceList == nil {
-		data.ServiceList = make([]string, len(services))
+		data.ServiceList = make([]string, 0, len(services))
 	}
 
 	for _, service_data := range services {
