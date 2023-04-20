@@ -1,12 +1,10 @@
 # protoc-gen-docjson
 
-[![CI (dev)](https://github.com/cuberat/protoc-gen-docjson/actions/workflows/unit_tests_dev.yml/badge.svg)](https://github.com/cuberat/protoc-gen-docjson/actions/workflows/unit_tests_dev.yml)
+[![CI (main)](https://github.com/cuberat/protoc-gen-docjson/actions/workflows/unit_tests_main.yml/badge.svg)](https://github.com/cuberat/protoc-gen-docjson/actions/workflows/unit_tests_main.yml)[![CI (dev)](https://github.com/cuberat/protoc-gen-docjson/actions/workflows/unit_tests_dev.yml/badge.svg)](https://github.com/cuberat/protoc-gen-docjson/actions/workflows/unit_tests_dev.yml)
 
 A protobuf compiler plugin that generates data to use in rendering documentation templates from protobuf specs.
 
 This plugin generates a JSON file containing meta data from protobuf specifications that is useful for building (in an automated fashion) documentation in HTML, Markdown, etc., for easier reading and distribution. This allows using the comments in the protobuf specifications as documentation in other formats without duplication of effort. In turn, this helps to keep documentation up to date, since the text for the documentation is in the protobuf specifications themselves.
-
-*Coming soon. There are no releases yet. But if you really want to play with it now, replace the `@latest` in the installation instructions below with `@dev`.*
 
 ## Installation
 
