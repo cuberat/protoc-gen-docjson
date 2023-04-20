@@ -32,6 +32,7 @@ import (
 	"strings"
 
 	// Third-party modules.
+
 	log "github.com/sirupsen/logrus"
 	desc_pb "google.golang.org/protobuf/types/descriptorpb"
 
@@ -40,6 +41,15 @@ import (
 	docdata "github.com/cuberat/protoc-gen-docjson/internal/docdata"
 	extensions "github.com/cuberat/protoc-gen-docjson/internal/extensions"
 )
+
+var CUSTOM_OPTION_TYPES = map[string]string{
+	".google.protobuf.FileOptions":      "file",
+	".google.protobuf.ServiceOptions":   "service",
+	".google.protobuf.MessageOptions":   "message",
+	".google.protobuf.FieldOptions":     "field",
+	".google.protobuf.EnumOptions":      "enum_decl",
+	".google.protobuf.EnumValueOptions": "enum_val",
+}
 
 func GenDocData(
 	conf *docdata.Config,
@@ -59,6 +69,7 @@ func GenDocData(
 
 		template_data.FileList = append(template_data.FileList, this_file.Name)
 		template_data.FileMap[this_file.Name] = this_file
+		this_file.CustomOptions = make(map[string]any)
 
 		this_file.Package = desc_file_info.GetPackage()
 		namespace := docdata.Namespace{this_file.Package}
@@ -75,7 +86,8 @@ func GenDocData(
 					append(this_file.ExternalDependencies, file)
 			}
 		}
-		this_file.Options = desc_file_info.Options
+
+		set_file_options(this_file, desc_file_info)
 
 		this_file.Syntax = new(docdata.SyntaxDecl)
 		if desc_file_info.Syntax != nil {
@@ -91,8 +103,13 @@ func GenDocData(
 		this_file.Messages = messages
 		this_file.Enums = get_enum_data(desc_file_info.EnumType, namespace,
 			this_file)
-		this_file.Services = get_service_data(desc_file_info.Service, this_file)
+		this_file.Services = get_service_data(desc_file_info.Service, namespace, this_file)
 
+		this_file.DeclaredCustomOptions = make(
+			map[string][]*docdata.FileExtension,
+			len(desc_file_info.Extension),
+		)
+		this_file.Extensions = make([]*docdata.FileExtension, 0)
 		for _, extension := range desc_file_info.Extension {
 			this_extension := new(docdata.FileExtension)
 			this_extension.Name = extension.GetName()
@@ -108,12 +125,18 @@ func GenDocData(
 
 			this_extension.Extendee = extension.GetExtendee()
 
+			option_type, ok := CUSTOM_OPTION_TYPES[this_extension.Extendee]
+			if ok {
+				this_option_type := this_file.DeclaredCustomOptions[option_type]
+				this_file.DeclaredCustomOptions[option_type] = append(this_option_type, this_extension)
+			}
+
 			this_file.Extensions =
 				append(this_file.Extensions, this_extension)
 		}
 
 		if desc_file_info.SourceCodeInfo != nil {
-			add_source_code_info(this_file, desc_file_info.SourceCodeInfo)
+			add_source_code_info(this_file, desc_file_info.SourceCodeInfo, conf)
 		}
 	}
 
@@ -122,6 +145,33 @@ func GenDocData(
 	massage_data(template_data)
 
 	return template_data, nil
+}
+
+func set_file_options(
+	this_file *docdata.FileData,
+	desc_file *desc_pb.FileDescriptorProto,
+) {
+	fopts := desc_file.Options
+	if fopts == nil {
+		fopts = new(desc_pb.FileOptions)
+	}
+	this_file.Options = &docdata.FileOptions{
+
+		JavaPackage:          fopts.GetJavaPackage(),
+		JavaOuterClassname:   fopts.GetJavaOuterClassname(),
+		JavaMultipleFiles:    fopts.GetJavaMultipleFiles(),
+		JavaStringCheckUtf8:  fopts.GetJavaStringCheckUtf8(),
+		GoPackage:            fopts.GetGoPackage(),
+		Deprecated:           fopts.GetDeprecated(),
+		CcEnableArenas:       fopts.GetCcEnableArenas(),
+		ObjcClassPrefix:      fopts.GetObjcClassPrefix(),
+		CsharpNamespace:      fopts.GetCsharpNamespace(),
+		SwiftPrefix:          fopts.GetSwiftPrefix(),
+		PhpClassPrefix:       fopts.GetPhpClassPrefix(),
+		PhpNamespace:         fopts.GetPhpNamespace(),
+		PhpMetadataNamespace: fopts.GetPhpMetadataNamespace(),
+		RubyPackage:          fopts.GetRubyPackage(),
+	}
 }
 
 func massage_data(data *docdata.TemplateData) {
@@ -236,7 +286,7 @@ func massage_service_data(
 	}
 
 	if data.ServiceList == nil {
-		data.ServiceList = make([]string, len(services))
+		data.ServiceList = make([]string, 0, len(services))
 	}
 
 	for _, service_data := range services {
@@ -297,6 +347,7 @@ func massage_extension_data(
 
 func get_service_data(
 	desc_services []*desc_pb.ServiceDescriptorProto,
+	namespace docdata.Namespace,
 	file_data *docdata.FileData,
 ) []*docdata.ServiceData {
 	svc_data := make([]*docdata.ServiceData, 0, len(desc_services))
@@ -305,15 +356,18 @@ func get_service_data(
 		this_svc.Name = desc.GetName()
 		this_svc.FullName = file_data.Package + "." + this_svc.Name
 		this_svc.DefinedIn = file_data.Name
+		this_svc.CustomOptions = make(map[string]any)
+		svc_namespace := namespace.Extend(this_svc.Name)
 
 		methods := make([]*docdata.MethodData, 0, len(desc.Method))
 		for _, method := range desc.Method {
 			methods = append(methods,
-				get_method_data_from_desc(method, this_svc, file_data))
+				get_method_data_from_desc(method, this_svc, svc_namespace,
+					file_data))
 		}
 		this_svc.Methods = methods
 
-		this_svc.Options = desc.Options
+		set_service_options(this_svc, desc)
 
 		svc_data = append(svc_data, this_svc)
 	}
@@ -321,28 +375,60 @@ func get_service_data(
 	return svc_data
 }
 
+func set_service_options(
+	this_svc *docdata.ServiceData,
+	desc_svc *desc_pb.ServiceDescriptorProto,
+) {
+	svc_opts := desc_svc.Options
+	if svc_opts == nil {
+		svc_opts = new(desc_pb.ServiceOptions)
+	}
+
+	this_svc.Options = &docdata.ServiceOptions{
+		Deprecated: svc_opts.GetDeprecated(),
+	}
+}
+
 func get_method_data_from_desc(
 	desc_method *desc_pb.MethodDescriptorProto,
 	svc_data *docdata.ServiceData,
+	namespace docdata.Namespace,
 	file_data *docdata.FileData,
 ) *docdata.MethodData {
 	method_data := new(docdata.MethodData)
 	method_data.Name = desc_method.GetName()
 	method_data.FullName = svc_data.FullName + "." + method_data.Name
 	method_data.DefinedIn = file_data.Name
+	method_data.CustomOptions = make(map[string]any)
 	method_data.RequestType, method_data.RequestFullType =
-		extract_type_names(desc_method.GetInputType())
+		extract_type_names(desc_method.GetInputType(), namespace)
 	method_data.RequestStreaming = desc_method.GetClientStreaming()
 	method_data.ResponseType, method_data.ResponseFullType =
-		extract_type_names(desc_method.GetOutputType())
+		extract_type_names(desc_method.GetOutputType(), namespace)
 	method_data.ResponseStreaming = desc_method.GetServerStreaming()
-	method_data.Options = desc_method.GetOptions()
+
+	set_method_options(method_data, desc_method)
 
 	return method_data
 }
 
+func set_method_options(
+	this_method *docdata.MethodData,
+	desc_method *desc_pb.MethodDescriptorProto,
+) {
+	method_opts := desc_method.Options
+	if method_opts == nil {
+		method_opts = new(desc_pb.MethodOptions)
+	}
+
+	this_method.Options = &docdata.MethodOptions{
+		Deprecated: method_opts.GetDeprecated(),
+	}
+}
+
 func extract_type_names(
 	element_type string,
+	namespace docdata.Namespace,
 ) (unqualified_type string, the_full_type string) {
 	the_full_type = strings.TrimPrefix(element_type, ".")
 	parts := strings.Split(element_type, ".")
@@ -354,6 +440,7 @@ func extract_type_names(
 func add_source_code_info(
 	file_data *docdata.FileData,
 	source_info *desc_pb.SourceCodeInfo,
+	conf *docdata.Config,
 ) {
 	for _, location := range source_info.Location {
 		loc_path := location.Path
@@ -372,9 +459,12 @@ func add_source_code_info(
 		case 6: // service
 			svc := file_data.Services[loc_path[1]]
 			add_service_comments(loc_path, svc, location)
+		case 7: // extension
+			add_extension_comments(loc_path[1:], file_data, location)
 		case 12: // syntax
 			syntax := file_data.Syntax
-			syntax.LeadingDetachedComments = location.LeadingDetachedComments
+			syntax.LeadingDetachedComments =
+				clean_comments_slice(location.LeadingDetachedComments)
 			syntax.LeadingComments, syntax.TrailingComments,
 				syntax.Description = clean_comments(location)
 		}
@@ -382,6 +472,22 @@ func add_source_code_info(
 	}
 }
 
+// If the provided slice is nil, return an empty slice so that the value does not
+// show up as `null` in JSON. Otherwise, return the provided slice.
+func clean_comments_slice(in_slice []string) []string {
+	if in_slice == nil {
+		return make([]string, 0)
+	}
+
+	cleaned := make([]string, 0, len(in_slice))
+	for _, comment := range in_slice {
+		cleaned = append(cleaned, strings.TrimSpace(comment))
+	}
+
+	return cleaned
+}
+
+// Trim white space around comments.
 func clean_comments(
 	location *desc_pb.SourceCodeInfo_Location,
 ) (leading_comments, trailing_comments, description string) {
@@ -408,6 +514,27 @@ func get_description(leading_comments, trailing_comments string) string {
 	return desc
 }
 
+func add_extension_comments(
+	loc_path []int32,
+	file_data *docdata.FileData,
+	location *desc_pb.SourceCodeInfo_Location,
+) {
+	if len(loc_path) == 0 {
+		// Extension declaration. We can get a comment, but nothing to attach it
+		// to, so dropping it.
+		return
+	}
+
+	if len(loc_path) == 1 {
+		ext := file_data.Extensions[loc_path[0]]
+		ext.LeadingDetachedComments =
+			clean_comments_slice(location.LeadingDetachedComments)
+		ext.LeadingComments, ext.TrailingComments, ext.Description =
+			clean_comments(location)
+		return
+	}
+}
+
 func add_enum_comments(
 	loc_path []int32,
 	enum_data *docdata.EnumData,
@@ -415,7 +542,8 @@ func add_enum_comments(
 ) {
 	if len(loc_path) == 0 {
 		// Comments for the enum declaration itself.
-		enum_data.LeadingDetachedComments = location.LeadingDetachedComments
+		enum_data.LeadingDetachedComments =
+			clean_comments_slice(location.LeadingDetachedComments)
 		enum_data.LeadingComments, enum_data.TrailingComments,
 			enum_data.Description = clean_comments(location)
 		return
@@ -427,6 +555,8 @@ func add_enum_comments(
 			enum_val := enum_data.Values[loc_path[1]]
 			enum_val.LeadingComments, enum_val.TrailingComments,
 				enum_val.Description = clean_comments(location)
+			enum_val.LeadingDetachedComments =
+				clean_comments_slice(location.LeadingDetachedComments)
 		}
 	}
 
@@ -438,7 +568,8 @@ func add_service_comments(
 	location *desc_pb.SourceCodeInfo_Location,
 ) {
 	if len(loc_path) == 2 {
-		svc.LeadingDetachedComments = location.LeadingDetachedComments
+		svc.LeadingDetachedComments =
+			clean_comments_slice(location.LeadingDetachedComments)
 		svc.LeadingComments, svc.TrailingComments, svc.Description =
 			clean_comments(location)
 		return
@@ -448,7 +579,8 @@ func add_service_comments(
 	if loc_path[2] == 2 {
 		if len(loc_path) == 4 {
 			method := svc.Methods[loc_path[3]]
-			method.LeadingDetachedComments = location.LeadingDetachedComments
+			method.LeadingDetachedComments =
+				clean_comments_slice(location.LeadingDetachedComments)
 			method.LeadingComments, method.TrailingComments,
 				method.Description = clean_comments(location)
 		}
@@ -464,6 +596,8 @@ func add_msg_desc(
 	if len(loc_path) == 0 {
 		msg.LeadingComments, msg.TrailingComments, msg.Description =
 			clean_comments(location)
+		msg.LeadingDetachedComments =
+			clean_comments_slice(location.LeadingDetachedComments)
 		return
 	}
 
@@ -475,7 +609,8 @@ func add_msg_desc(
 		if len(loc_path) == 2 {
 			field.LeadingComments, field.TrailingComments, field.Description =
 				clean_comments(location)
-			field.LeadingDetachedComments = location.LeadingDetachedComments
+			field.LeadingDetachedComments =
+				clean_comments_slice(location.LeadingDetachedComments)
 		}
 	case 3:
 		// Nested messages
@@ -499,7 +634,8 @@ func add_oneof_comments(
 ) {
 	if len(loc_path) == 0 {
 		// Comments for the oneof declaration.
-		oneof_decl.LeadingDetachedComments = location.LeadingDetachedComments
+		oneof_decl.LeadingDetachedComments =
+			clean_comments_slice(location.LeadingDetachedComments)
 		oneof_decl.LeadingComments, oneof_decl.TrailingComments,
 			oneof_decl.Description = clean_comments(location)
 		return
@@ -516,6 +652,7 @@ func get_msg_data_from_desc(
 	this_msg.Name = msg.GetName()
 	this_msg.FullName = namespace.QualifyName(this_msg.Name)
 	this_msg.DefinedIn = file_data.Name
+	this_msg.CustomOptions = make(map[string]any)
 
 	msg_ns := namespace.Extend(this_msg.Name)
 
@@ -530,9 +667,9 @@ func get_msg_data_from_desc(
 
 	this_msg.Enums = get_enum_data(msg.EnumType, msg_ns, file_data)
 
-	// this_msg.ExtensionRanges = msg.ExtensionRange
-	this_msg.Options = msg.Options
+	set_message_options(this_msg, msg)
 
+	this_msg.NestedMessages = make([]*docdata.MessageData, 0)
 	if len(msg.NestedType) > 0 {
 		for _, nested_msg := range msg.NestedType {
 			this_msg.NestedMessages = append(this_msg.NestedMessages,
@@ -541,6 +678,21 @@ func get_msg_data_from_desc(
 	}
 
 	return this_msg
+}
+
+func set_message_options(
+	this_msg *docdata.MessageData,
+	desc_msg *desc_pb.DescriptorProto,
+) {
+	msg_opts := desc_msg.GetOptions()
+	if msg_opts == nil {
+		msg_opts = new(desc_pb.MessageOptions)
+	}
+
+	this_msg.Options = &docdata.MessageOptions{
+		Deprecated: msg_opts.GetDeprecated(),
+		MapEntry:   msg_opts.GetMapEntry(),
+	}
 }
 
 func get_oneof_data(
@@ -577,6 +729,7 @@ func get_enum_data(
 		this_enum.Name = desc_enum.GetName()
 		this_enum.FullName = namespace.QualifyName(this_enum.Name)
 		this_enum.DefinedIn = file_data.Name
+		this_enum.CustomOptions = make(map[string]any)
 		log.Debugf("found enum %q", this_enum.Name)
 
 		for _, value := range desc_enum.Value {
@@ -587,16 +740,46 @@ func get_enum_data(
 			if value.Number != nil {
 				this_val.Number = *value.Number
 			}
+			this_val.CustomOptions = make(map[string]any, 0)
 
-			this_val.Options = value.Options
+			set_enum_val_options(this_val, value)
 
 			this_enum.Values = append(this_enum.Values, this_val)
 		}
 
-		this_enum.Options = desc_enum.Options
+		set_enum_options(this_enum, desc_enum)
 	}
 
 	return enum_data
+}
+
+func set_enum_val_options(
+	this_enum_val *docdata.EnumValue,
+	desc_enum_val *desc_pb.EnumValueDescriptorProto,
+) {
+	enum_val_opts := desc_enum_val.Options
+	if enum_val_opts == nil {
+		enum_val_opts = new(desc_pb.EnumValueOptions)
+	}
+
+	this_enum_val.Options = &docdata.EnumValueOptions{
+		Deprecated: enum_val_opts.GetDeprecated(),
+	}
+}
+
+func set_enum_options(
+	this_enum *docdata.EnumData,
+	desc_enum *desc_pb.EnumDescriptorProto,
+) {
+	enum_opts := desc_enum.Options
+	if enum_opts == nil {
+		enum_opts = new(desc_pb.EnumOptions)
+	}
+
+	this_enum.Options = &docdata.EnumOptions{
+		AllowAlias: enum_opts.GetAllowAlias(),
+		Deprecated: enum_opts.GetDeprecated(),
+	}
 }
 
 func get_field_data_from_desc(
@@ -611,6 +794,7 @@ func get_field_data_from_desc(
 	this_field.FullName = namespace.QualifyName(this_field.Name)
 	this_field.FieldNumber = field.GetNumber()
 	this_field.DefinedIn = file_data.Name
+	this_field.CustomOptions = make(map[string]any, 0)
 
 	if field.Label != nil {
 		s := desc_pb.FieldDescriptorProto_Label_name[int32(*field.Label)]
@@ -621,7 +805,7 @@ func get_field_data_from_desc(
 		// FIXME: handle scoping here to provide full name in all cases.
 		this_field.TypeName = field.GetTypeName()
 		this_field.TypeName, this_field.FullTypeName =
-			extract_type_names(field.GetTypeName())
+			extract_type_names(field.GetTypeName(), namespace)
 	}
 
 	if field.Type != nil {
@@ -642,11 +826,18 @@ func get_field_data_from_desc(
 		this_field.OneofFullName = oneof_data.FullName
 	}
 
-	if field.Options != nil {
-		this_field.Options = field.Options
+	fopts := field.Options
+	if field.Options == nil {
+		fopts = new(desc_pb.FieldOptions)
 	}
 
-	this_field.CustomOptions = make(map[string]interface{}, 0)
+	this_field.Options = &docdata.FieldOptions{
+		CType:      fopts.GetCtype(),
+		Packed:     fopts.GetPacked(),
+		JSType:     fopts.GetJstype(),
+		Lazy:       fopts.GetLazy(),
+		Deprecated: fopts.GetDeprecated(),
+	}
 
 	return this_field
 }

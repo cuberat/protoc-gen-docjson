@@ -1,0 +1,145 @@
+/*
+ * Leading detached comment for the syntax statement.
+ * A second line.
+ */
+
+// This is the syntax statement leading comment.
+syntax = "proto3"; // This is a trailing comment for syntax.
+
+import "google/protobuf/descriptor.proto";
+
+package MyServices.Tester;
+
+// Leading comment for FieldOptions extension.
+extend google.protobuf.FieldOptions {
+  // Leading comment for custom option field_required.
+  optional bool field_required = 51234;
+}
+
+extend google.protobuf.MethodOptions {
+  optional bool method_not_implemented = 51235; // Trailing for method_not_implemented.
+}
+
+extend google.protobuf.MessageOptions {
+  optional bool message_not_implemented = 51236;
+}
+
+extend google.protobuf.ServiceOptions {
+  optional bool service_not_implemented = 51237;
+}
+
+extend google.protobuf.FileOptions {
+  optional bool file_deprecated = 51238;
+  optional string file_mnemonic = 51240;
+  optional float file_double = 51241;
+  optional float file_float = 51242;
+  optional float file_int64 = 51243;
+}
+
+extend google.protobuf.EnumOptions {
+  optional bool enum_deprecated = 51239;
+}
+
+// This is a leading comment for the go_package file option.
+option go_package = "Myservices/grpc/tester";
+option java_package = "Myservices.tester";
+
+option (file_deprecated) = true;
+option (file_mnemonic) = "some random name";
+option (file_double) = 5643343.423;
+option (file_float) = 0.569;
+option (file_int64) = -343434343;
+
+// Tester main structure, TesterRequest.
+message TesterRequest {
+    // Leading comment for the client_info field.
+    ClientInfo client_info = 1 [(field_required) = true];
+
+    string url = 2; // Trailing comment for the url field.
+}
+
+// Detached leading comment for enum TesterError
+
+// Leading comment for enum TesterError.
+enum TesterError {
+    option (enum_deprecated) = true;
+
+    // Leading comment for enum value NONE.
+    NONE = 0;
+
+    // Detached leading comment for User error.
+
+    // Leading comment for enum value PBKAC.
+    PBKAC = 1; // Trailing comment for enum value PBKAC.
+
+    INTERN = 2; // Trailing comment for enum value INTERN.
+}
+
+// Leading comment for the TesterResponse message.
+message TesterResponse {
+    // Leading comment for in_list field.
+    bool in_list = 1;
+
+    // Comment for the stuff oneof.
+    oneof stuff {
+        // Leading comment for the foo field within the stuff oneof.
+        string foo = 2;
+
+        int32 bar = 3; // Trailing comment for the bar field.
+    }
+
+    // Response thing embedded enum.
+    enum ResponseThing {
+        option (enum_deprecated) = true;
+
+        // Leading comment for the enum value FOO.
+        FOO = 0;
+
+        BAR = 1; // Trailing comment for the enum value BAR.
+    }
+
+    // Leading comment for thing field of type ResponseThing.
+    ResponseThing thing = 4;
+
+    // Leading comment for the morestuff oneof.
+    oneof morestuff {
+        // Leading comment for another_foo oneof field.
+        string another_foo = 5;
+
+        string another_bar = 6; // Trailing comment for another_bar oneof field.
+    }
+
+    // Leading comment for the embedded message EmbeddedTester.
+    message EmbeddedTester {
+        // Leading comment for embedded field inside embedded message.
+        string embedded_field = 1; // Trailing comment for embedded field.
+    }
+}
+
+// Leading comment for the ClientInfo message.
+message ClientInfo {
+    // Leading comment for the name field.
+    string name = 1;
+
+    // Leading comment for the alt_name field that is marked deprecated.
+    string alt_name = 2 [deprecated = true];
+
+    // Leading comment for the repeated field list_of_stuff.
+    repeated string list_of_stuff = 3;
+}
+
+// Leading comment for a message that has not been implemented yet.
+message UnimplementedMessage {
+    option (MyServices.Tester.message_not_implemented) = true;
+
+    // Leading comment for the name field.
+    string name = 1;
+}
+
+// Leading comment for the deprecated message OldStuff.
+message OldStuff {
+    option deprecated = true;
+
+    // Leading comment for the name field.
+    string name = 1;
+}

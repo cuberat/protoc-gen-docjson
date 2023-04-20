@@ -105,7 +105,7 @@ func (proc *CustomOptionProcessor) ExtractFieldOptions(
 		}
 
 		if field.CustomOptions == nil {
-			field.CustomOptions = make(map[string]interface{})
+			field.CustomOptions = make(map[string]any)
 		}
 
 		field.CustomOptions[name] = val
@@ -131,7 +131,7 @@ func (proc *CustomOptionProcessor) ExtractServiceOptions(
 		}
 
 		if svc.CustomOptions == nil {
-			svc.CustomOptions = make(map[string]interface{})
+			svc.CustomOptions = make(map[string]any)
 		}
 
 		svc.CustomOptions[name] = val
@@ -163,7 +163,7 @@ func (proc *CustomOptionProcessor) ExtractMethodOptions(
 		}
 
 		if method.CustomOptions == nil {
-			method.CustomOptions = make(map[string]interface{})
+			method.CustomOptions = make(map[string]any)
 		}
 
 		method.CustomOptions[name] = val
@@ -207,7 +207,7 @@ func (proc *CustomOptionProcessor) ExtractMessageOptions(
 		}
 
 		if msg.CustomOptions == nil {
-			msg.CustomOptions = make(map[string]interface{})
+			msg.CustomOptions = make(map[string]any)
 		}
 
 		msg.CustomOptions[name] = val
@@ -229,7 +229,7 @@ func (proc *CustomOptionProcessor) ExtractEnumOptions(
 
 	if loc_path[0] == 3 && len(loc_path) == 2 {
 		if enum_data.CustomOptions == nil {
-			enum_data.CustomOptions = make(map[string]interface{})
+			enum_data.CustomOptions = make(map[string]any)
 		}
 
 		name, val, err := proc.BuildOptionVal(loc_path[1],
@@ -239,7 +239,7 @@ func (proc *CustomOptionProcessor) ExtractEnumOptions(
 		}
 
 		if enum_data.CustomOptions == nil {
-			enum_data.CustomOptions = make(map[string]interface{})
+			enum_data.CustomOptions = make(map[string]any)
 		}
 
 		enum_data.CustomOptions[name] = val
@@ -287,7 +287,7 @@ func (proc *CustomOptionProcessor) ExtractFileOptions(
 		}
 
 		if this_file.CustomOptions == nil {
-			this_file.CustomOptions = make(map[string]interface{})
+			this_file.CustomOptions = make(map[string]any)
 		}
 
 		this_file.CustomOptions[name] = val
@@ -302,7 +302,7 @@ func (proc *CustomOptionProcessor) BuildOptionVal(
 	ext_number int32,
 	ext_type string,
 	loc *desc_pb.SourceCodeInfo_Location,
-) (string, interface{}, error) {
+) (string, any, error) {
 	extendee, ok := proc.Extensions[ext_type]
 	if !ok {
 		return "", nil, fmt.Errorf("no such extension type %q", ext_type)
@@ -312,7 +312,7 @@ func (proc *CustomOptionProcessor) BuildOptionVal(
 		return "", nil, fmt.Errorf("no such extendee number %d", ext_number)
 	}
 
-	span_text := get_text_from_span(proc.File.Name, loc.Span, proc.Conf)
+	span_text := GetTextFromSpan(proc.File.Name, loc.Span, proc.Conf)
 	if span_text == "" {
 		return "", nil,
 			fmt.Errorf("couldn't get span text for custom option %q", ext.Name)
@@ -326,7 +326,7 @@ func (proc *CustomOptionProcessor) BuildOptionVal(
 func convert_ext_val(
 	ext *docdata.FileExtension,
 	val_string string,
-) interface{} {
+) any {
 	ext_type := ext.Type
 	switch ext_type {
 	case "double", "float":
@@ -512,7 +512,7 @@ func find_file_in_paths(paths []string, file_name string) (string, error) {
 		file_name, paths)
 }
 
-func get_text_from_span(file_name string,
+func GetTextFromSpan(file_name string,
 	loc_span []int32,
 	conf *docdata.Config,
 ) string {

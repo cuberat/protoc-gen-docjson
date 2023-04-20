@@ -1,0 +1,14 @@
+
+// Syntax leading comment for a proto file in a subdirectory. Both block-style
+// comments and line-style comments work throughout the specifications.
+
+// This is a syntax statement leading comment.
+syntax = "proto3";
+
+package MyServices.Tester.Subdir;
+
+// Leading comment for Stuff.
+message Stuff {
+    // Leading comment for field1.
+    string field1 = 1;
+}

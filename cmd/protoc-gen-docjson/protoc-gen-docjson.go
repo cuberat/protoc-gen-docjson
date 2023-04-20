@@ -28,6 +28,7 @@ package main
 
 import (
 	// Built-in/core modules.
+	"flag"
 	"os"
 
 	// "path"
@@ -38,11 +39,21 @@ import (
 	// Generated code.
 	// First-party modules.
 	plugin "github.com/cuberat/protoc-gen-docjson/internal/plugin"
+	version_mod "github.com/cuberat/protoc-gen-docjson/internal/version"
 )
 
 var BUILD_TIME = ""
 
 func main() {
+	var print_version bool
+	flag.BoolVar(&print_version, "version", false, "Print version.")
+	flag.Parse()
+
+	if print_version {
+		version_mod.PrintVersion()
+		os.Exit(0)
+	}
+
 	err := plugin.ProcessCodeGenRequest(os.Stdin, os.Stdout)
 	if err != nil {
 		log.Fatalf("couldn't process code generation request: %s", err)

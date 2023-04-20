@@ -5,7 +5,7 @@ OUTFILE = protos.json
 READABLE_OUTFILE = protos_readable.json
 
 PROTOS = tester service-tester subdir/docstuff
-PROTO_DIR = $(TOP_DIR)/proto
+PROTO_DIR = $(TOP_DIR)/tests/data/proto1
 PROTO_FILES = $(foreach proto,$(PROTOS),$(PROTO_DIR)/$(proto).proto)
 
 
@@ -30,5 +30,18 @@ checkdebug: plugin
 		$(PROTO_FILES)
 	cat $(TOP_DIR)/$(OUTFILE) | jq > $(TOP_DIR)/$(READABLE_OUTFILE)
 
+checkyaml: plugin
+	/usr/bin/env PATH=$(BIN_DIR):$${PATH} protoc \
+		--docjson_out="$(OUT_DIR)" \
+		--docjson_opt=proto=$(PROTO_DIR),outfmt=yaml \
+		-I$(PROTO_DIR) \
+		$(PROTO_FILES)
+
 plugin:
 	cd cmd/protoc-gen-docjson && go build -a
+
+test: plugin
+	cd tests && go test
+
+testv: plugin
+	cd tests && go test -v
