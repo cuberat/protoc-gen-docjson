@@ -518,7 +518,57 @@ func do_check_files(t *testing.T, data map[string]any) {
 }
 
 func do_check_messages(t *testing.T, data map[string]any) {
-	// FIXME: complete message checks.
+	msg_map := data["message_map"].(map[string]any)
+	msg_full_name := "MyServices.Tester.TesterRequest"
+	msg := msg_map[msg_full_name].(map[string]any)
+	fields := msg["fields"].([]any)
+
+	exp_msg_comments := map[string]any{
+		"description":               "Tester main structure, TesterRequest.",
+		"leading_comments":          "Tester main structure, TesterRequest.",
+		"trailing_comments":         "",
+		"leading_detached_comments": []string{},
+	}
+
+	check_comments(t, msg, exp_msg_comments,
+		fmt.Sprintf("msg %s", msg_full_name))
+
+	field := fields[0].(map[string]any)
+
+	options := field["options"]
+	custom_options := field["custom_options"]
+	exp_field_comments := map[string]any{
+		"description":               "Leading comment for the client_info field.",
+		"leading_comments":          "Leading comment for the client_info field.",
+		"trailing_comments":         "",
+		"leading_detached_comments": []string{},
+	}
+
+	check_comments(t, field, exp_field_comments,
+		fmt.Sprintf("field number %d of %s",
+			field["field_number"], msg_full_name))
+
+	exp_options := map[string]any{
+		"ctype":      0,
+		"packed":     false,
+		"jstype":     0,
+		"lazy":       false,
+		"deprecated": false,
+	}
+	exp_custom_options := map[string]any{
+		"field_required": true,
+	}
+
+	if !reflect.DeepEqual(options, exp_options) {
+		t.Logf("options in first field of %s incorrect: "+
+			"got %v, expected %v", msg_full_name, options, exp_options)
+	}
+
+	if !reflect.DeepEqual(custom_options, exp_custom_options) {
+		t.Logf("custom options in first field of %s incorrect: "+
+			"got %v, expected %v", msg_full_name, custom_options,
+			exp_custom_options)
+	}
 }
 
 func check_extensions(
