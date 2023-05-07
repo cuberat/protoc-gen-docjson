@@ -59,6 +59,83 @@ func TestComments(t *testing.T) {
 			do_check_enums(st, data)
 		},
 	)
+
+	t.Run("service_deps check",
+		func(st *testing.T) {
+			do_check_service_deps(st, data)
+		},
+	)
+
+	t.Run("service_file_dep check",
+		func(st *testing.T) {
+			do_check_service_file_deps(st, data)
+		},
+	)
+}
+
+func do_check_service_file_deps(t *testing.T, data map[string]any) {
+	svc_file_deps, ok := data["service_file_deps"].(map[string]any)
+	if !ok {
+		t.Errorf("wrong type for service_file_deps: got %T, "+
+			"expected map[string]any", data["service_file_deps"])
+		return
+	}
+
+	if len(svc_file_deps) != 1 {
+		t.Errorf("wrong number of items in service_file_deps: got %d, "+
+			"expected 1", len(svc_file_deps))
+		return
+	}
+
+	svc_name := "MyServices.Service.Tester"
+	expected_deps := []any{"tester.proto"}
+	deps, ok := svc_file_deps[svc_name].([]any)
+	if !ok {
+		t.Errorf("wrong type for svc dep list %q: got %T, expected []any",
+			svc_name, svc_file_deps[svc_name])
+		return
+	}
+	if !reflect.DeepEqual(deps, expected_deps) {
+		t.Errorf("wrong list of dependencies for svc %q: got %v, expected %v",
+			svc_name, deps, expected_deps)
+		return
+	}
+}
+
+func do_check_service_deps(t *testing.T, data map[string]any) {
+	svc_deps, ok := data["service_deps"].(map[string]any)
+	if !ok {
+		t.Errorf("wrong type for service_deps: got %T, "+
+			"expected map[string]any", data["service_deps"])
+		return
+	}
+
+	if len(svc_deps) != 1 {
+		t.Errorf("wrong number of items in service_deps: got %d, "+
+			"expected 1", len(svc_deps))
+		return
+	}
+
+	svc_name := "MyServices.Service.Tester"
+	this_svc_deps, ok := svc_deps[svc_name].([]any)
+	if !ok {
+		t.Errorf("wrong type for dep %q dep list: got %T, "+
+			"expected []any", svc_name, svc_deps[svc_name])
+		return
+	}
+
+	expected_deps := []any{
+		"MyServices.Tester.TesterRequest",
+		"MyServices.Tester.ClientInfo",
+		"MyServices.Tester.TesterResponse",
+		"MyServices.Tester.TesterResponse.ResponseThing",
+		"MyServices.Tester.TesterResponse.EmbeddedTester",
+	}
+	if !reflect.DeepEqual(this_svc_deps, expected_deps) {
+		t.Errorf("wrong service dep list for %q: got %v, expected %v",
+			svc_name, this_svc_deps, expected_deps)
+		return
+	}
 }
 
 func do_check_services(t *testing.T, data map[string]any) {

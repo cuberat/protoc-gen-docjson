@@ -287,6 +287,9 @@ type TemplateData struct {
 	// Map of fully-qualified service names to lists of dependent message and
 	// enumeration names.
 	ServiceDeps map[string][]string `json:"service_deps"`
+
+	// Map of fully-qualified service names to lists of dependent files.
+	ServiceFileDeps map[string][]string `json:"service_file_deps"`
 }
 
 func (ns Namespace) QualifyName(name string) string {
