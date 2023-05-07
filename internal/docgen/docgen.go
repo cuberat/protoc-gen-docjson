@@ -40,6 +40,7 @@ import (
 	// First-party modules.
 	docdata "github.com/cuberat/protoc-gen-docjson/internal/docdata"
 	extensions "github.com/cuberat/protoc-gen-docjson/internal/extensions"
+	util "github.com/cuberat/protoc-gen-docjson/internal/util"
 )
 
 var CUSTOM_OPTION_TYPES = map[string]string{
@@ -198,19 +199,43 @@ func add_dependencies(data *docdata.TemplateData) {
 	data.ServiceDeps = make(map[string][]string, len(data.ServiceMap))
 	for svc_name, svc_data := range data.ServiceMap {
 		for _, method := range svc_data.Methods {
-			request_deps := make([]string, len(data.MessageDeps[method.RequestFullType])+1)
-			request_deps[0] = method.RequestFullType
-			copy(request_deps[1:], data.MessageDeps[method.RequestFullType])
-			response_deps := make([]string, len(data.MessageDeps[method.ResponseFullType])+1)
-			response_deps[0] = method.ResponseFullType
-			copy(response_deps[1:], data.MessageDeps[method.ResponseFullType])
-
-			these_deps := make([]string, len(request_deps)+len(response_deps)+2)
-			these_deps[0] = method.RequestFullType
-			copy(these_deps, request_deps)
-			copy(these_deps[len(request_deps):], response_deps)
-			data.ServiceDeps[svc_name] = uniquify_slice(these_deps)
+			svc_dep_set := util.NewStringSet()
+			svc_dep_set.Add(method.RequestFullType)
+			svc_dep_set.Update(data.MessageDeps[method.RequestFullType])
+			svc_dep_set.Add(method.ResponseFullType)
+			svc_dep_set.Update(data.MessageDeps[method.ResponseFullType])
+			data.ServiceDeps[svc_name] = svc_dep_set.GetItems()
 		}
+	}
+
+	add_service_file_deps(data)
+}
+
+func add_service_file_deps(data *docdata.TemplateData) {
+	data.ServiceFileDeps = make(map[string][]string, len(data.ServiceMap))
+	for _, svc_name := range data.ServiceList {
+		file_dep_set := util.NewStringSet()
+		this_service_deps := data.ServiceDeps[svc_name]
+		for _, msg_name := range this_service_deps {
+			for _, msg_dep := range data.MessageDeps[msg_name] {
+				msg, ok := data.MessageMap[msg_dep]
+				if ok {
+					file_dep_set.Add(msg.DefinedIn)
+					continue
+				}
+
+				enum, ok := data.EnumMap[msg_dep]
+				if ok {
+					file_dep_set.Add(enum.DefinedIn)
+					continue
+				}
+
+				log.Infof("dependency %q not found for service %q",
+					msg_dep, svc_name)
+			}
+		}
+
+		data.ServiceFileDeps[svc_name] = file_dep_set.GetItems()
 	}
 }
 

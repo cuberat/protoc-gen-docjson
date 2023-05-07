@@ -84,6 +84,10 @@ A map of fully-qualified message names to a list of the messages and enumeration
 
 A map of fully-qualified service names to a list of the messages and enumerations they depend on.
 
+#### `service_file_deps`
+
+A map of fully-qualified service names to a list of the files containing messages and enumerations they depend on.
+
 ### Common Fields
 
 The descriptors describe below have some fields in common, so those are described here.
