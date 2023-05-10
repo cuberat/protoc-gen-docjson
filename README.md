@@ -42,7 +42,7 @@ Specifies the output file name. The file will be output to the output directory 
 
 Specifies the full path to the top-level directory containing the protobuf specifications.
 
-### pretty
+#### pretty
 
 Include indentation and other whitespace in the JSON output to make it more human-readable.
 
