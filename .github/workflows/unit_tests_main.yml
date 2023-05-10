@@ -6,8 +6,6 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-    types:
-      - closed
 
 jobs:
   build:
@@ -17,9 +15,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.20.4
+
     - name: Install dependencies
       run: sudo apt-get -y install protobuf-compiler
-      
+
     - name: Build plugin
       run: make plugin
 
