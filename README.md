@@ -32,6 +32,20 @@ cd ${proto_dir} && protoc -I${PROTO_DIR} \
     file1 file2 file3
 ```
 
+### Options
+
+#### outfile
+
+Specifies the output file name. The file will be output to the output directory specified by the `docjson_out` parameter provided to the protobuf compiler.
+
+#### proto
+
+Specifies the full path to the top-level directory containing the protobuf specifications.
+
+### pretty
+
+Include indentation and other whitespace in the JSON output to make it more human-readable.
+
 ## Output Structure
 
 ### Top-Level Fields

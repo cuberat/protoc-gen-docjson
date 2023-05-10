@@ -45,6 +45,7 @@ type PluginOpts struct {
 	OutFile       string          `json:"out_file"`
 	OutFormat     string          `json:"out_format"`
 	ProtoPaths    []string        `json:"proto_paths"`
+	PrettyPrint   bool            `json:"pretty_out"`
 }
 
 type CompilerDiag struct {

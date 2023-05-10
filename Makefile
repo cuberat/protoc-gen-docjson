@@ -17,10 +17,9 @@ all: plugin
 check: plugin
 	/usr/bin/env PATH=$(BIN_DIR):$${PATH} protoc \
 		--docjson_out="$(OUT_DIR)" \
-		--docjson_opt=outfile=$(OUTFILE),proto=$(PROTO_DIR) \
+		--docjson_opt=outfile=$(OUTFILE),proto=$(PROTO_DIR),pretty \
 		-I$(PROTO_DIR) \
 		$(PROTO_FILES)
-	cat $(TOP_DIR)/$(OUTFILE) | jq > $(TOP_DIR)/$(READABLE_OUTFILE)
 
 checkdebug: plugin
 	/usr/bin/env PATH=$(BIN_DIR):$${PATH} protoc \

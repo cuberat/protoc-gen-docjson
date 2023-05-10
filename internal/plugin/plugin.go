@@ -132,14 +132,24 @@ func serialize_content(
 
 	switch out_format {
 	case "yaml":
-		return marshal_to_yaml(data)
+		return marshal_to_yaml(data, conf)
 	default:
-		return marshal_to_json(data)
+		return marshal_to_json(data, conf)
 	}
 }
 
-func marshal_to_json(data any) (string, error) {
-	buffer_bytes, err := json.Marshal(data)
+func marshal_to_json(data any, conf *docdata.Config) (string, error) {
+	var (
+		buffer_bytes []byte
+		err          error
+	)
+
+	if conf.PluginOpts.PrettyPrint {
+		buffer_bytes, err = json.MarshalIndent(data, "", "  ")
+	} else {
+		buffer_bytes, err = json.Marshal(data)
+	}
+
 	// marshaler := &protojson.MarshalOptions{
 	// 	Multiline:       false,
 	// 	Indent:          "",
@@ -157,7 +167,7 @@ func marshal_to_json(data any) (string, error) {
 	return string(buffer_bytes), nil
 }
 
-func marshal_to_yaml(data any) (string, error) {
+func marshal_to_yaml(data any, conf *docdata.Config) (string, error) {
 	buffer_bytes, err := yaml.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("couldn't marshal to YAML: %w", err)
@@ -241,6 +251,8 @@ func parse_plugin_option(opts string) *docdata.PluginOpts {
 			options.DebugSections[opt_pair[1]] = true
 		case "outfmt":
 			options.OutFormat = opt_pair[1]
+		case "pretty":
+			options.PrettyPrint = true
 		}
 	}
 
